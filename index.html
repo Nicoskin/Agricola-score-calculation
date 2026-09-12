@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Счётный лист Агриколы</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="description" content="Подсчёт победных очков в Агриколе (издание 2016 года) с подсказками">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700;800&family=Roboto+Slab:wght@700;800&display=swap">
+<style>
+:root{
+  --ground:#E8ECDC; --surface:#F9FAF3; --surface-2:#EFF2E4; --ink:#23251A; --muted:#606450;
+  --line:#CBD0B6; --accent:#46701F; --accent-ink:#FFFFFF; --accent-soft:#D9E5C1;
+  --neg:#8A5424; --focus:#2F5F9E; --shadow:rgba(35,37,26,.10);
+  --display:"Alegreya SC", Georgia, "Times New Roman", serif;
+  --body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#16180F; --surface:#20231A; --surface-2:#292D21; --ink:#E9EAD8; --muted:#A2A688;
+    --line:#3A3F2F; --accent:#94BD57; --accent-ink:#14170D; --accent-soft:#33412A;
+    --neg:#D9A06A; --focus:#8DB4F0; --shadow:rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#16180F; --surface:#20231A; --surface-2:#292D21; --ink:#E9EAD8; --muted:#A2A688;
+  --line:#3A3F2F; --accent:#94BD57; --accent-ink:#14170D; --accent-soft:#33412A;
+  --neg:#D9A06A; --focus:#8DB4F0; --shadow:rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+body{margin:0;background:var(--ground);color:var(--ink);font:400 16px/1.45 var(--body);-webkit-text-size-adjust:100%;
+  padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+button,input{font:inherit;color:inherit}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+h1,h2,h3{text-wrap:balance}
+
+/* ---------- монеты ---------- */
+.coin{--s:46px;flex:none;width:var(--s);height:var(--s);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font:800 calc(var(--s) * .54)/1 "Roboto Slab", Rockwell, Georgia, serif;font-variant-numeric:lining-nums tabular-nums;color:#3A2905;
+  background:radial-gradient(circle at 34% 28%,#FFF6B8 0,#F0CE4E 38%,#C99B22 78%,#A57A12 100%);
+  border:2px solid #6F520C;box-shadow:inset 0 0 0 2px rgba(255,244,176,.75),inset 0 0 0 4px rgba(150,110,20,.35),0 1px 2px rgba(0,0,0,.35)}
+.coin.neg{color:#F7E6C6;background:radial-gradient(circle at 34% 28%,#B98452 0,#8A5628 42%,#5E3614 85%,#4A2A0E 100%);
+  border-color:#2E1A07;box-shadow:inset 0 0 0 2px rgba(235,190,140,.45),inset 0 0 0 4px rgba(40,20,5,.3),0 1px 2px rgba(0,0,0,.35)}
+.coin .mi{font-style:normal;font-weight:700;font-size:.55em;margin-right:.05em;transform:translateY(-.02em)}
+.forest,.stepper,.seg,.owner,.coin,.hint-btn,.tot,.secnav{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.coin.empty{background:transparent;border:2px dashed var(--line);box-shadow:none;color:var(--muted);font-weight:500}
+.coin.sm{--s:32px}
+.coin.md{--s:36px}
+.forest .coin.empty{border-color:rgba(255,255,255,.55);color:#EAF3DC}
+
+/* ---------- шапка ---------- */
+.top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--ground) 92%,transparent);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top-row{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(8px + env(safe-area-inset-top)) 14px 2px}
+.brand{display:flex;align-items:baseline;gap:10px;min-width:0}
+.brand h1{margin:0;font:800 25px/1 var(--display)}
+.brand small{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.secnav{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:6px 10px 8px;scrollbar-width:none}
+.secnav::-webkit-scrollbar{display:none}
+.secnav a{flex:none;padding:6px 13px;border-radius:999px;color:var(--ink);text-decoration:none;font-weight:500;font-size:15px}
+.secnav a[aria-current="true"]{background:var(--ink);color:var(--surface)}
+
+.btn{font-weight:700;font-size:15px;padding:9px 14px;min-height:42px;border-radius:9px;border:1px solid var(--ink);background:var(--ink);color:var(--surface);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.danger{background:transparent;color:#B0412A;border-color:#B0412A}
+.linkbtn{border:0;background:none;padding:6px 0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:14px}
+
+/* ---------- раскладка ---------- */
+.layout{max-width:1180px;margin:0 auto;padding:6px 10px 20px;display:grid;gap:20px}
+@media (min-width:1000px){
+  .layout{grid-template-columns:minmax(0,1fr) 400px;align-items:start;padding-inline:16px}
+  .results{position:sticky;top:104px;max-height:calc(100vh - 190px);overflow:auto}
+}
+.group{scroll-margin-top:100px}
+.group > h2{margin:18px 4px 8px;font:700 23px/1.1 var(--display)}
+.cats{display:grid;gap:10px;margin-top:10px}
+
+/* ---------- табло как на игровом поле ---------- */
+.forest{background-color:#3B7127;border-radius:14px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),0 2px 6px var(--shadow);
+  background-image:
+    radial-gradient(circle at 30% 30%,rgba(150,205,95,.42) 0 9px,transparent 10px),
+    radial-gradient(circle at 70% 70%,rgba(22,62,16,.42) 0 13px,transparent 14px),
+    radial-gradient(circle at 62% 18%,rgba(105,168,62,.5) 0 7px,transparent 8px),
+    radial-gradient(circle at 18% 82%,rgba(118,178,72,.38) 0 11px,transparent 12px),
+    radial-gradient(circle at 50% 50%,rgba(30,78,22,.3) 0 16px,transparent 17px);
+  background-size:38px 38px,54px 54px,29px 29px,46px 46px,71px 71px}
+.rboard.scale{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:9px}
+.rcol{display:flex;flex-direction:column;align-items:center;gap:10px;padding:9px 3px 12px;border-radius:10px;background:rgba(222,248,196,.2)}
+.tile{position:relative;width:100%;max-width:62px;aspect-ratio:1;display:grid;place-items:center}
+.tile > svg{position:relative;width:100%;height:100%}
+.tile b{position:absolute;left:-4px;right:-4px;top:50%;transform:translateY(-50%);text-align:center;font:800 clamp(18px,5.8vw,24px)/1 var(--body);
+  color:#231708;text-shadow:0 0 3px #FFF6DC,0 0 3px #FFF6DC,0 0 2px #FFF6DC;pointer-events:none}
+.tile.lbl-top b{top:36%}
+.tile.plaque > svg{opacity:.78}
+.tile.plaque b{top:56%;color:#1B1206;font-size:clamp(18px,5.4vw,23px);
+  text-shadow:-1.5px -1.5px 0 #fff,1.5px -1.5px 0 #fff,-1.5px 1.5px 0 #fff,1.5px 1.5px 0 #fff,0 -2px 0 #fff,0 2px 0 #fff,-2px 0 0 #fff,2px 0 0 #fff,0 0 5px rgba(255,255,255,.9)}
+.tile.hit::before{content:"";position:absolute;inset:-8px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,242,160,.9) 0,rgba(255,236,140,.5) 48%,rgba(255,236,140,0) 70%)}
+.marks{position:absolute;left:-6px;right:-6px;bottom:-9px;display:flex;justify-content:center;pointer-events:none}
+.marks svg{width:19px;height:19px;margin:0 -3px}
+.rboard.pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;padding:9px}
+.pair{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:10px;background:rgba(222,248,196,.2)}
+.pair-top{display:flex;align-items:center;justify-content:center;gap:12px}
+.pair .tile{width:58px}
+.pair small{min-height:2.4em;display:flex;align-items:center;justify-content:center;text-align:center;color:#F5FBEA;font-size:16px;font-weight:700;line-height:1.2;text-shadow:0 1px 2px rgba(0,0,0,.75)}
+
+/* ---------- карточки категорий ---------- */
+.cat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.cat-h{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center}
+.ico{width:46px;height:46px;border-radius:9px;background:var(--surface-2);display:grid;place-items:center}
+.ico svg{width:38px;height:38px}
+.cat-h h3{margin:0;font:700 19px/1.15 var(--body);display:flex;align-items:center;gap:6px}
+.donemark{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:var(--accent-ink)}
+.rule{display:block;font-size:13.5px;color:var(--muted);line-height:1.25;margin-top:2px}
+.hint-btn{min-height:38px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap}
+.hint-btn[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+.plist{list-style:none;margin:8px 0 0;padding:0}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto 46px;gap:10px;align-items:center;padding:8px 0}
+.prow + .prow{border-top:1px solid var(--line)}
+.pname{display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;min-width:0}
+.pname span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdot{display:inline-block;width:14px;height:14px;border-radius:50%;flex:none;box-shadow:0 0 0 1.5px rgba(0,0,0,.22)}
+.pn{color:var(--pn-l)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .pn{color:var(--pn-d)} }
+:root[data-theme="dark"] .pn{color:var(--pn-d)}
+.owners .owner[aria-pressed="true"] .pn{color:var(--pc-ink)}
+.prow.rooms{grid-template-columns:minmax(0,1fr) 46px}
+.rctrl{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.prow.sum .mcount{color:var(--muted);font-size:14px;white-space:nowrap}
+
+.stepper{display:flex;align-items:stretch;border:1px solid var(--ink);border-radius:10px;overflow:hidden;background:var(--surface);flex:none}
+.stepper button{width:48px;height:48px;border:0;background:var(--surface-2);font:700 27px/1 var(--body);cursor:pointer}
+.stepper button:active{background:var(--accent-soft)}
+.stepper input{width:54px;text-align:center;border:0;border-inline:1px solid var(--line);background:var(--surface);font:800 21px var(--body);font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield;padding:0}
+.stepper input::placeholder{color:var(--muted);font-weight:400}
+.stepper input::-webkit-inner-spin-button,.stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.stepper.sm button{width:40px;height:40px;font-size:22px}
+.stepper.sm input{width:46px;font-size:18px}
+@media (max-width:360px){ .stepper button{width:42px} .stepper input{width:46px} }
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;width:68px;height:48px;border:0;background:var(--surface);cursor:pointer;font-size:11.5px;line-height:1}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.seg svg{width:26px;height:26px}
+
+/* подсказка */
+.hint{display:grid;grid-template-columns:minmax(0,250px) minmax(0,1fr);gap:12px 18px;align-items:start;background:var(--surface-2);border-radius:10px;padding:12px;margin-top:10px}
+@media (max-width:640px){ .hint{grid-template-columns:1fr} }
+.hint-art svg{display:block;width:100%;height:auto;max-width:320px}
+.hint-text p{margin:0 0 8px;max-width:62ch}
+.hint-text p:last-child{margin-bottom:0}
+.hint-text .ex{font-weight:700}
+.eq{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding-top:6px}
+.eq-item{margin:0;display:flex;flex-direction:column;align-items:center;gap:3px}
+.eq-ico{position:relative;width:56px;height:56px;border:1px solid var(--line);border-radius:9px;background:var(--surface);display:grid;place-items:center}
+.eq-ico svg{width:44px;height:44px}
+.eq-ico b{position:absolute;top:-7px;right:-7px;min-width:24px;height:24px;padding:0 6px;border-radius:12px;background:var(--ink);color:var(--surface);font-size:13px;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+.eq-item figcaption{font-size:12px;color:var(--muted);text-align:center;max-width:74px;line-height:1.15}
+.op{font:700 20px var(--body);color:var(--muted);align-self:flex-start;margin-top:16px}
+.eq-res{align-self:flex-start;margin-top:9px;font-weight:800;font-size:17px;padding:6px 10px;border-radius:8px;background:var(--accent-soft);white-space:nowrap}
+
+/* особые улучшения */
+.mlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-top:10px}
+.mitem{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface-2)}
+.mitem.owned{background:var(--accent-soft);border-color:var(--accent)}
+.mtop{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mname b{display:block;line-height:1.2}
+.mname small{display:block;font-size:13px;color:var(--muted);line-height:1.2}
+.owners{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.owner{display:inline-flex;align-items:center;gap:6px;min-height:38px;max-width:100%;padding:4px 12px 4px 8px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);font-size:14.5px;font-weight:700;cursor:pointer}
+.owner[aria-pressed="true"]{background:var(--pc);border-color:var(--pc);color:var(--pc-ink)}
+.owner[aria-pressed="true"] .pdot{box-shadow:0 0 0 1.5px var(--pc-ink)}
+.mbonus{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);font-size:14px}
+.mbonus b{white-space:nowrap}
+.cat .plist.summary{margin-top:10px;border-top:2px solid var(--line)}
+
+/* ---------- итоги ---------- */
+.results{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;scroll-margin-top:100px}
+.results > h2{margin:0 0 10px;font:700 23px/1.1 var(--display)}
+.podium{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.ptot{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;column-gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2)}
+.ptot > svg{grid-row:span 2;width:40px;height:40px}
+.ptname{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ptot b{font:800 34px/1 var(--display);font-variant-numeric:tabular-nums}
+.ptot.lead{border-color:#B8901E;box-shadow:inset 0 0 0 1px #B8901E;background:color-mix(in srgb,#EFCB4A 20%,var(--surface-2))}
+.ptot em{font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A6A0E;margin-left:4px}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .ptot em{color:#E6C55A} }
+:root[data-theme="dark"] .ptot em{color:#E6C55A}
+.rgroup{margin-top:16px}
+.rgroup h3{margin:0 2px 6px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.rscroll{overflow-x:auto;border-radius:14px}
+.rtable{display:grid;gap:4px;padding:8px;min-width:calc(160px + var(--n) * 44px)}
+.rrow{display:grid;grid-template-columns:32px minmax(0,1fr) repeat(var(--n),36px);gap:8px;align-items:center;padding:4px 8px;border-radius:9px;background:rgba(222,248,196,.2)}
+.rrow.rhead{background:none;padding-block:0}
+.rhp{display:grid;place-items:center}
+.rhp svg{width:24px;height:24px}
+.ricon svg{width:32px;height:32px;display:block}
+.rname{color:#F5FBEA;font-weight:700;font-size:15px;line-height:1.15;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* нижняя панель */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);
+  box-shadow:0 -6px 20px var(--shadow);padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
+.dock-in{max-width:1180px;margin:0 auto;display:flex;gap:8px;overflow-x:auto}
+.tot{flex:1 0 auto;min-width:120px;display:flex;align-items:center;gap:8px;min-height:50px;padding:4px 12px;border-radius:10px;background:var(--surface-2);color:var(--ink);text-decoration:none}
+.tot span{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px}
+.tot b{margin-left:auto;font:800 26px/1 var(--display);font-variant-numeric:tabular-nums}
+.tot.lead{box-shadow:inset 0 0 0 1.5px #B8901E;background:color-mix(in srgb,#EFCB4A 20%,var(--surface-2))}
+
+/* диалог игроков */
+dialog{border:0;border-radius:14px;padding:0;width:min(520px,calc(100% - 20px));max-height:calc(100% - 40px);background:var(--surface);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(20,22,12,.55)}
+.dlg-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.dlg-h h2{margin:0;font:700 22px var(--display)}
+.dlg-b{padding:4px 16px 12px;overflow:auto;max-height:65vh}
+.pedit{display:grid;gap:8px;padding:12px 0;border-bottom:1px solid var(--line)}
+.pedit input{width:100%;min-width:0;font:700 18px var(--body);padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2)}
+.swatches{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.sw{width:32px;height:32px;border-radius:50%;padding:0;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line);cursor:pointer}
+.sw[aria-checked="true"]{box-shadow:0 0 0 2.5px var(--ink)}
+.swatches .linkbtn{margin-left:auto}
+.dlg-f{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--line)}
+
+footer{max-width:1180px;margin:0 auto;padding:0 16px 24px;color:var(--muted);font-size:14px}
+footer p{margin:0;max-width:75ch}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-row">
+    <div class="brand"><h1>Агрикола</h1><small>издание 2016</small></div>
+    <button type="button" class="btn ghost" id="openPlayers">Игроки</button>
+  </div>
+  <nav class="secnav" id="secnav" aria-label="Разделы подсчёта"></nav>
+</header>
+
+<main class="layout">
+  <div id="cats"></div>
+  <section class="results" id="results" aria-labelledby="resTitle">
+    <h2 id="resTitle">Итоги партии</h2>
+    <div class="podium" id="podium"></div>
+    <div id="rgroups"></div>
+  </section>
+</main>
+
+<footer>
+  <p>Правила подсчёта — по изданию «Агриколы» 2016 года. Рисунки нарисованы для этой страницы по мотивам игровых компонентов. Всё сохраняется только в этом браузере.</p>
+</footer>
+
+<nav class="dock" aria-label="Текущий счёт"><div class="dock-in" id="dock"></div></nav>
+
+<dialog id="playersDlg" aria-labelledby="dlgTitle">
+  <div class="dlg-h"><h2 id="dlgTitle">Игроки</h2><button type="button" class="btn ghost" data-close>Готово</button></div>
+  <div class="dlg-b" id="dlgBody"></div>
+  <div class="dlg-f">
+    <button type="button" class="btn ghost" id="addPlayer">+ Добавить игрока</button>
+    <button type="button" class="btn danger" id="resetScores">Новая партия</button>
+  </div>
+</dialog>
+
+<script>
+(() => {
+const STORE = 'agricola2016-scorer-v2';
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = n => n > 0 ? '+' + n : n < 0 ? '−' + (-n) : '0';
+const fmtT = n => n < 0 ? '−' + (-n) : String(n);
+const rng = (a, b) => b === Infinity ? a + '+' : a === b ? String(a) : a + '–' + b;
+const plural = (n, f) => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? f[2] : b > 1 && b < 5 ? f[1] : b === 1 ? f[0] : f[2]; };
+const coinInner = n => n < 0 ? `<i class="mi">−</i>${-n}` : String(n);
+const coin = (n, cls = '') => n === '?' ? `<span class="coin${cls}">?</span>` : n == null ? `<span class="coin empty${cls}">—</span>` : `<span class="coin${n < 0 ? ' neg' : ''}${cls}">${coinInner(n)}</span>`;
+
+const COLORS = {
+  /* [фишка, название, текст на фишке, текст на светлом фоне, текст на тёмном фоне] */
+  purple:['#7A4AA0','Фиолетовый','#FFFFFF','#6B3A93','#C9A3EC'], red:['#C8392E','Красный','#FFFFFF','#B02F25','#F4907F'],
+  blue:['#2F62B0','Синий','#FFFFFF','#2A58A0','#92B6F3'], green:['#3F8A3A','Зелёный','#FFFFFF','#2E6A2A','#8FD07F'],
+  yellow:['#E0B21C','Жёлтый','#23251A','#7F6200','#F0CC4A'], natural:['#D9C29A','Натуральный','#23251A','#76603E','#E3CDA5']
+};
+const dot = p => `<i class="pdot" style="background:${COLORS[p.color][0]}"></i>`;
+const pnStyle = p => `--pn-l:${COLORS[p.color][3]};--pn-d:${COLORS[p.color][4]}`;
+const pn = p => `<span class="pn" style="${pnStyle(p)}">${esc(p.name || 'Без имени')}</span>`;
+
+/* ---------- рисунки ---------- */
+const svg = inner => `<svg viewBox="0 0 48 48" aria-hidden="true">${inner}</svg>`;
+const animal = (body, line, back, front) => `<g stroke="${line}" stroke-width="2" stroke-linejoin="round"><rect x="9" y="29" width="6" height="12" rx="2" fill="${body}"/><rect x="26" y="29" width="6" height="12" rx="2" fill="${body}"/><rect x="4" y="15" width="32" height="19" rx="9.5" fill="${body}"/>${back}<ellipse cx="37" cy="18" rx="7.5" ry="6.5" fill="${body}"/>${front}</g>`;
+/* значок улучшения: рамка-трапеция, сверху цветная панель */
+const tray = (outline, L, R) => {
+  const split = !!R; R = R || L;
+  return svg(
+    `<path d="M12 9H24V40H5z" fill="${L.edge}"/><path d="M24 9h12l7 31H24z" fill="${R.edge}"/>` +
+    `<path d="M14 12.5H24V37H8.4z" fill="${L.cream}"/><path d="M24 12.5h10l5.6 24.5H24z" fill="${R.cream}"/>` +
+    `<path d="M15.3 15H24V25.5H12.9z" fill="${L.panel}"/><path d="M24 15h8.7l2.4 10.5H24z" fill="${R.panel}"/>` +
+    `<path d="M16.5 18.5H24M15 22.5h9" stroke="${L.pat}" stroke-width="1.5" stroke-linecap="round"/><path d="M24 18.5h7.5M24 22.5h9" stroke="${R.pat}" stroke-width="1.5" stroke-linecap="round"/>` +
+    `<path d="M11.2 29.5h25.6l1.2 5H10z" fill="none" stroke="#B08850" stroke-width="1.2" opacity=".55"/>` +
+    '');
+};
+const MAT = {
+  w:{fill:'#C08A52', line:'#5A3818', name:'Изба', short:'Изба', per:0, tex:'<path d="M16 22v18M24 16v24M32 22v18" stroke="#5A3818" stroke-width="1.3" opacity=".55"/>'},
+  c:{fill:'#C9683F', line:'#6A2C14', name:'Мазанка', short:'Мазанка', per:1, tex:'<path d="M9 28h30M9 34h30M16 22v6M31 22v6M23 28v6M35 28v6M16 34v7M30 34v7" stroke="#F3C9AE" stroke-width="1.3" opacity=".85"/>'},
+  s:{fill:'#858A89', line:'#474B4B', name:'Каменный дом', short:'Каменный', per:2, tex:'<g fill="#BCC0BF" stroke="#5A5F5F" stroke-width="1"><rect x="19.5" y="15" width="9" height="6" rx="1.2"/><rect x="10" y="23" width="8" height="5.5" rx="1.2"/><rect x="19.5" y="23" width="9" height="5.5" rx="1.2"/><rect x="30" y="23" width="8" height="5.5" rx="1.2"/><rect x="9.5" y="30" width="9" height="5" rx="1.2"/><rect x="29.5" y="30" width="9" height="5" rx="1.2"/><rect x="9.5" y="36" width="4.5" height="4.5" rx="1"/><rect x="15" y="36" width="3.5" height="4.5" rx="1"/><rect x="29.5" y="36" width="3.5" height="4.5" rx="1"/><rect x="34" y="36" width="4.5" height="4.5" rx="1"/></g>'}
+};
+const IC = {
+  field: () => svg('<rect x="4" y="7" width="40" height="34" rx="5" fill="#8A5A2E" stroke="#4A2F17" stroke-width="2"/><path d="M10 14.5h28M10 21h28M10 27.5h28M10 34h28" stroke="#B9844D" stroke-width="3" stroke-linecap="round"/>'),
+  pasture: () => svg('<rect x="4" y="7" width="40" height="34" rx="5" fill="#9CC75A" stroke="#4F6E26" stroke-width="2"/><rect x="10" y="13" width="28" height="22" fill="none" stroke="#8A5A2A" stroke-width="3.2"/><g fill="#5E3D1B"><rect x="7.5" y="10.5" width="5" height="5" rx="1"/><rect x="35.5" y="10.5" width="5" height="5" rx="1"/><rect x="7.5" y="32.5" width="5" height="5" rx="1"/><rect x="35.5" y="32.5" width="5" height="5" rx="1"/></g><path d="M14 32l1.5-3 1.5 3M31 32l1.5-3 1.5 3" stroke="#4F7A22" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+  grain: () => svg('<path d="M24 45V12" stroke="#8C6A1E" stroke-width="2.5" stroke-linecap="round"/>' +
+    [17,25,33].map(y => `<ellipse cx="18.5" cy="${y}" rx="4" ry="7" transform="rotate(-32 18.5 ${y})" fill="#EBBE3E" stroke="#8C6A1E" stroke-width="1.6"/><ellipse cx="29.5" cy="${y}" rx="4" ry="7" transform="rotate(32 29.5 ${y})" fill="#EBBE3E" stroke="#8C6A1E" stroke-width="1.6"/>`).join('') +
+    '<ellipse cx="24" cy="10" rx="3.6" ry="6.5" fill="#EBBE3E" stroke="#8C6A1E" stroke-width="1.6"/>'),
+  veg: () => svg('<path d="M24 19c0-5 2.5-9 7-10" stroke="#4E7A22" stroke-width="3.2" fill="none" stroke-linecap="round"/><ellipse cx="24" cy="30" rx="18" ry="13" fill="#E4782B" stroke="#7A3A12" stroke-width="2"/><path d="M24 17.5c-6 3-6 22 0 25.5M24 17.5c6 3 6 22 0 25.5M13 21c-4 5-4 14 1 19M35 21c4 5 4 14-1 19" stroke="#9E4A17" stroke-width="1.6" fill="none"/>'),
+  sheep: () => svg(animal('#F3EFE2','#5B5648','<ellipse cx="32.5" cy="12.5" rx="2.6" ry="4" fill="#F3EFE2"/>','<circle cx="39.5" cy="17" r="1.3" fill="#2B2822" stroke="none"/>')),
+  pig: () => svg(animal('#3E3833','#121010','<path d="M31.5 14.5l.5-6.5 5.5 4z" fill="#3E3833"/>','<ellipse cx="43.5" cy="19.5" rx="3" ry="3.6" fill="#6E5D52"/><circle cx="43.2" cy="18.4" r=".7" fill="#1A1614" stroke="none"/><circle cx="43.2" cy="20.8" r=".7" fill="#1A1614" stroke="none"/><circle cx="38.5" cy="15.5" r="1.3" fill="#EDE6D6" stroke="none"/>')),
+  cattle: () => svg(animal('#8D5731','#3A200E','<path d="M31.5 13c-3-3-3-6-1-8M42.5 13c3-3 3-6 1-8" stroke="#EFE5CC" stroke-width="2.6" fill="none" stroke-linecap="round"/>','<rect x="11" y="18" width="10" height="9" rx="3" fill="#EFE5CC" stroke="none"/><ellipse cx="41.5" cy="21.5" rx="4" ry="3" fill="#D9A58A"/><circle cx="37" cy="16" r="1.3" fill="#1E1208" stroke="none"/>')),
+  empty: () => svg('<rect x="5" y="7" width="38" height="34" rx="5" fill="#B7CF86" stroke="#6D8744" stroke-width="2" stroke-dasharray="5 3.5"/><path d="M16 30l2-5 2 5M28 22l1.5-4 1.5 4" stroke="#6D8744" stroke-width="1.6" fill="none" stroke-linecap="round"/>'),
+  barn: () => svg('<rect x="4" y="7" width="40" height="34" rx="5" fill="#9CC75A" stroke="#4F6E26" stroke-width="2"/><path d="M8 11.5h32M8 36.5h32" stroke="#8A5A2A" stroke-width="3" stroke-linecap="round"/><path d="M14 24L24 15l10 9v9H14z" fill="#A36D39" stroke="#4A2F17" stroke-width="2" stroke-linejoin="round"/><rect x="20.5" y="26" width="7" height="7" fill="#5A3A1C"/>'),
+  room: (m = 'w') => { const M = MAT[m]; return svg(`<path d="M8 22L24 9l16 13v19H8z" fill="${M.fill}" stroke="${M.line}" stroke-width="2" stroke-linejoin="round"/>${M.tex}<rect x="20" y="30" width="8" height="11" rx="1" fill="${M.line}"/><path d="M5 23.5L24 7.5l19 16" stroke="${M.line}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`); },
+  meeple: (color = '#A9ADA8') => svg(`<path d="M24 3.5c4.6 0 7.4 3.1 7.4 7 0 2.6-1.2 4.5-3 5.8 5.8 1 13.6 3.4 13.6 7.7 0 2.7-3.7 3-7.8 2.4l5.5 14.8c.5 1.5-.5 2.3-1.9 2.3h-8.6L24 36.8l-5.2 6.7h-8.6c-1.4 0-2.4-.8-1.9-2.3l5.5-14.8c-4.1.6-7.8.3-7.8-2.4 0-4.3 7.8-6.7 13.6-7.7-1.8-1.3-3-3.2-3-5.8 0-3.9 2.8-7 7.4-7z" fill="${color}" stroke="rgba(20,15,5,.6)" stroke-width="1.6" stroke-linejoin="round"/>`),
+  begging: () => svg('<rect x="8" y="3" width="32" height="42" rx="3.5" fill="#C9C08F" stroke="#5E5733" stroke-width="2"/><rect x="11" y="6" width="26" height="26" rx="1.5" fill="#A9A67C"/><path d="M33.5 10v22" stroke="#6B4A26" stroke-width="1.8" stroke-linecap="round"/><path d="M13 32c0-9 4-15 11-15s11 6 11 15z" fill="#6F7560"/><path d="M16 20c0-6 3.5-10 8-10s8 4 8 10c0 2-1 4-2 5H18c-1-1-2-3-2-5z" fill="#7E8470"/><ellipse cx="24" cy="18.5" rx="4.2" ry="4.8" fill="#E1C29B"/><path d="M19.8 19.5c0 5 1.8 8.5 4.2 8.5s4.2-3.5 4.2-8.5c-1 1.6-2.4 2.2-4.2 2.2s-3.2-.6-4.2-2.2z" fill="#E7E3D6"/><path d="M11 33h26v8.5a1.5 1.5 0 0 1-1.5 1.5h-23a1.5 1.5 0 0 1-1.5-1.5z" fill="#8E8A52"/><circle cx="24" cy="38" r="6.3" fill="#3B3822" stroke="#D9D2A8" stroke-width="1.2"/><text x="24" y="41" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-weight="800" font-size="8.5" fill="#F4EFD8">−3</text>'),
+  major: () => tray('#4E1A15', {edge:'#9A3F35', cream:'#F5E6CC', panel:'#B5564B', pat:'#7A2C24'}),
+  minor: () => tray('#6B3F12', {edge:'#E3872A', cream:'#FFF0D8', panel:'#F0A447', pat:'#C06A16'}, {edge:'#E6BE2C', cream:'#FFF6CF', panel:'#F2D250', pat:'#B8931A'}),
+  card: () => svg('<rect x="9" y="3" width="30" height="42" rx="3.5" fill="#FFF3DA" stroke="#9A5A12" stroke-width="2"/><rect x="12" y="6" width="24" height="16" rx="1.5" fill="#E9962F"/><path d="M18 10h12l2 8H16z" fill="#FFF3DA" opacity=".85"/><path d="M14 27h20M14 32h20M14 37h13" stroke="#C9A36A" stroke-width="1.8" stroke-linecap="round"/>'),
+  bonus: () => svg('<path d="M24 4.5l5.8 12.2 13.3 1.6-9.8 9.2 2.5 13.2L24 34.2l-11.8 6.5 2.5-13.2-9.8-9.2 13.3-1.6z" fill="#EBBE3E" stroke="#8C6A1E" stroke-width="2" stroke-linejoin="round"/>'),
+  wood: () => svg('<rect x="5" y="18" width="36" height="13" rx="6.5" fill="#B0773F" stroke="#4A2F17" stroke-width="2"/><ellipse cx="36" cy="24.5" rx="5" ry="5.5" fill="#E2B57E" stroke="#4A2F17" stroke-width="1.6"/><path d="M12 22h14M15 27h12" stroke="#7A4E22" stroke-width="1.3"/>')
+};
+const CHECK = '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* мини-схема фермы 5×3 */
+function farm(tokens, opts = {}) {
+  const S = 36, P = 8, W = S * 5 + P * 2, H = S * 3 + P * 2, hl = opts.hl;
+  const MF = {w:['#C08A52','#5A3818'], c:['#C9683F','#6A2C14'], s:['#A7ABAA','#474B4B']};
+  let cells = '', fence = '', labels = '';
+  const seen = {}, cnt = {n:0};
+  const line = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+  const badge = (cx, cy, L) => { const w = Math.max(16, L.length * 7 + 6); return `<g><rect x="${cx - w/2}" y="${cy - 8}" width="${w}" height="16" rx="8" fill="#FFFDF3" stroke="#2A2A1C" stroke-width="1"/><text x="${cx}" y="${cy + 4}" text-anchor="middle" font-family="Alegreya Sans, sans-serif" font-size="11.5" font-weight="800" fill="#2A2A1C">${L}</text></g>`; };
+  tokens.forEach((t, i) => {
+    const r = Math.floor(i / 5), c = i % 5, x = P + c * S, y = P + r * S, k = t[0], st = t.includes('t');
+    const tag = k === 'p' ? (st ? 'pt' : 'p') : k;
+    const on = !hl || hl.includes(tag);
+    const tile = (f, s, dash) => `<rect x="${x + 2}" y="${y + 2}" width="${S - 4}" height="${S - 4}" rx="3" fill="${f}"${s ? ` stroke="${s}" stroke-width="1.3"` : ''}${dash ? ' stroke-dasharray="3 2"' : ''}/>`;
+    let g = '';
+    if (k === '.' || k === 't') g += tile('#A9C878', '#E7F1CF', true);
+    else if (k === 'f' || k === 'g') {
+      g += tile('#8A5A2E', '#4A2F17');
+      for (let j = 1; j <= 3; j++) { const yy = y + 2 + j * (S - 4) / 4; g += `<line x1="${x + 8}" x2="${x + S - 8}" y1="${yy}" y2="${yy}" stroke="#B9844D" stroke-width="2" stroke-linecap="round"/>`; }
+      if (k === 'g') g += `<g fill="#EBBE3E" stroke="#6E520F" stroke-width="1"><circle cx="${x + 13}" cy="${y + 19}" r="3.6"/><circle cx="${x + 20}" cy="${y + 15}" r="3.6"/><circle cx="${x + 22}" cy="${y + 22}" r="3.6"/></g>`;
+    }
+    else if (k === 'p') g += tile('#A9D364');
+    else if (MF[k]) { const [f, l] = MF[k]; g += tile(f, l) + `<path d="M${x + 9} ${y + 19}l9 -8 9 8v10h-18z" fill="none" stroke="${l}" stroke-width="1.6" stroke-linejoin="round"/>`; }
+    if (st) g += `<path d="M${x + 10} ${y + 21}l8-7 8 7v9h-16z" fill="#A36D39" stroke="#4A2F17" stroke-width="1.5" stroke-linejoin="round"/>`;
+    cells += `<g opacity="${on ? 1 : .3}">${g}</g>`;
+    if (k === 'p') {
+      const G = t[1], same = j => j != null && tokens[j] && tokens[j][0] === 'p' && tokens[j][1] === G;
+      if (!same(r > 0 ? i - 5 : null)) fence += line(x, y, x + S, y);
+      if (!same(r < 2 ? i + 5 : null)) fence += line(x, y + S, x + S, y + S);
+      if (!same(c > 0 ? i - 1 : null)) fence += line(x, y, x, y + S);
+      if (!same(c < 4 ? i + 1 : null)) fence += line(x + S, y, x + S, y + S);
+    }
+    if (on && opts.label) { const L = opts.label(tag, t, seen, cnt); if (L) labels += badge(x + S - 10, y + 10, L); }
+  });
+  const fo = hl && !hl.some(h => h === 'p' || h === 'pt') ? .3 : 1;
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.aria || 'Схема фермы')}"><rect width="${W}" height="${H}" rx="8" fill="#5F8233"/>${cells}<g opacity="${fo}" stroke="#6B4118" stroke-width="3.5" stroke-linecap="round">${fence}</g>${labels}</svg>`;
+}
+const FARM = ['f','f','p1','p1','p2t', 'w','g','p1','p1','.', 'w','.','t','.','.'];
+
+function eq(parts, result) {
+  return '<div class="eq">' + parts.map((p, i) =>
+    (i && p.op !== '' ? `<span class="op">${p.op || '+'}</span>` : '') +
+    `<figure class="eq-item"><div class="eq-ico">${p.icon}${p.n != null ? `<b>${p.n}</b>` : ''}</div><figcaption>${p.cap || ''}</figcaption></figure>`
+  ).join('') + (result ? `<span class="op">=</span><div class="eq-res">${result}</div>` : '') + '</div>';
+}
+
+/* ---------- правила ---------- */
+const MAJORS = [
+  {id:'fire2', name:'Очаг', sub:'стоимость 2 глины', pts:1},
+  {id:'fire3', name:'Очаг', sub:'стоимость 3 глины', pts:1},
+  {id:'hearth4', name:'Кухонный очаг', sub:'стоимость 4 глины', pts:1},
+  {id:'hearth5', name:'Кухонный очаг', sub:'стоимость 5 глины', pts:1},
+  {id:'well', name:'Колодец', sub:'', pts:4},
+  {id:'clayoven', name:'Глиняная печь', sub:'', pts:2},
+  {id:'stoneoven', name:'Каменная печь', sub:'', pts:3},
+  {id:'joinery', name:'Столярная мастерская', sub:'бонус: дерево 3/5/7 → +1/+2/+3', pts:2, steps:[3,5,7], res:'Дерево'},
+  {id:'pottery', name:'Гончарная мастерская', sub:'бонус: глина 3/5/7 → +1/+2/+3', pts:2, steps:[3,5,7], res:'Глина'},
+  {id:'basket', name:'Корзиночная мастерская', sub:'бонус: тростник 2/4/5 → +1/+2/+3', pts:2, steps:[2,4,5], res:'Тростник'}
+];
+const craftBonus = (n, s) => n == null ? 0 : n >= s[2] ? 3 : n >= s[1] ? 2 : n >= s[0] ? 1 : 0;
+
+const animalsText = 'Считаются все животные этого вида: на пастбищах, в хлевах, одно домашнее животное в доме и животные на картах.';
+const CATS = [
+  {id:'fields', kind:'ladder', name:'Поля', short:'Поля', icon:IC.field, max:15,
+    ladder:[[0,1,-1],[2,2,1],[3,3,2],[4,4,3],[5,Infinity,4]],
+    hint:() => ({art:farm(FARM, {hl:['f','g'], label:(tag, t, s, c) => String(++c.n), aria:'Ферма, на которой отмечены 3 поля'}),
+      text:['Посчитайте жетоны полей на своей ферме. Засеянное и пустое поле считаются одинаково.', 'Если какая-то карта прямо называет себя полем — прибавьте и её.'],
+      ex:'На схеме 3 поля → 2 очка'})},
+  {id:'pastures', kind:'ladder', name:'Пастбища', short:'Пастбища', icon:IC.pasture, max:15,
+    ladder:[[0,0,-1],[1,1,1],[2,2,2],[3,3,3],[4,Infinity,4]],
+    hint:() => ({art:farm(FARM, {hl:['p','pt'], label:(tag, t, s) => { if (s[t[1]]) return ''; s[t[1]] = 1; return t[1]; }, aria:'Ферма с двумя пастбищами'}),
+      text:['Пастбище — участок, со всех сторон окружённый заборами. Размер не важен: огороженная область из 4 клеток — это одно пастбище.', 'Хлев внутри пастбища не делит его на части.'],
+      ex:'На схеме 2 пастбища (из 4 клеток и из 1) → 2 очка'})},
+  {id:'grain', kind:'ladder', name:'Зерно', short:'Зерно', icon:IC.grain, max:60,
+    ladder:[[0,0,-1],[1,3,1],[4,5,2],[6,7,3],[8,Infinity,4]],
+    hint:() => ({art:eq([{icon:IC.field(), n:3, cap:'на поле'}, {icon:IC.field(), n:2, cap:'на поле'}, {icon:IC.grain(), n:1, cap:'в запасе'}], '6 → 3 очка'),
+      text:['Всё зерно, которое у вас есть: в личном запасе, на засеянных полях и на картах.', 'Зерно, которое уже превратили в хлеб или еду, не считается.']})},
+  {id:'veg', kind:'ladder', name:'Овощи', short:'Овощи', icon:IC.veg, max:40,
+    ladder:[[0,0,-1],[1,1,1],[2,2,2],[3,3,3],[4,Infinity,4]],
+    hint:() => ({art:eq([{icon:IC.field(), n:1, cap:'на поле'}, {icon:IC.veg(), n:2, cap:'в запасе'}], '3 → 3 очка'),
+      text:['Все овощи: в запасе, на полях и на картах. Съеденные или приготовленные — не считаются.']})},
+  {id:'sheep', kind:'ladder', name:'Овцы', short:'Овцы', icon:IC.sheep, max:60,
+    ladder:[[0,0,-1],[1,3,1],[4,5,2],[6,7,3],[8,Infinity,4]],
+    hint:() => ({art:eq([{icon:IC.pasture(), n:4, cap:'пастбище'}, {icon:IC.barn(), n:1, cap:'хлев'}, {icon:IC.room('w'), n:1, cap:'в доме'}], '6 → 3 очка'),
+      text:[animalsText]})},
+  {id:'boar', kind:'ladder', name:'Свиньи', short:'Свиньи', icon:IC.pig, max:60,
+    ladder:[[0,0,-1],[1,2,1],[3,4,2],[5,6,3],[7,Infinity,4]],
+    hint:() => ({art:eq([{icon:IC.pasture(), n:2, cap:'пастбище'}, {icon:IC.card(), n:1, cap:'на карте'}], '3 → 2 очка'),
+      text:[animalsText, 'Шкала у свиней короче, чем у овец.']})},
+  {id:'cattle', kind:'ladder', name:'Коровы', short:'Коровы', icon:IC.cattle, max:60,
+    ladder:[[0,0,-1],[1,1,1],[2,3,2],[4,5,3],[6,Infinity,4]],
+    hint:() => ({art:eq([{icon:IC.pasture(), n:1, cap:'пастбище'}, {icon:IC.room('w'), n:1, cap:'в доме'}], '2 → 2 очка'),
+      text:[animalsText, 'Коровы — самые «дорогие» животные: уже 6 коров дают максимум.']})},
+
+  {id:'unused', kind:'unit', name:'Незанятые клетки', short:'Незанятые клетки', rule:'−1 за каждую клетку', icon:IC.empty, per:-1, max:15,
+    hint:() => ({art:farm(FARM, {hl:['.','t'], label:tag => tag === '.' ? '−1' : '0', aria:'Ферма с четырьмя пустыми клетками'}),
+      text:['−1 за каждую клетку фермы (всего их 15), на которой нет ни комнаты, ни поля, ни пастбища, ни хлева.', 'Клетка с неогороженным хлевом считается занятой. Быстрый способ: 15 − комнаты − поля − клетки пастбищ − хлева вне пастбищ.'],
+      ex:'На схеме 4 пустые клетки → −4'})},
+  {id:'stables', kind:'unit', name:'Огороженные хлева', short:'Хлева', rule:'1 очко за хлев в пастбище, максимум 4', icon:IC.barn, per:1, max:4,
+    hint:() => ({art:farm(FARM, {hl:['pt','t'], label:tag => tag === 'pt' ? '+1' : '0', aria:'Ферма: один хлев в пастбище и один без забора'}),
+      text:['1 очко за каждый хлев, стоящий внутри пастбища.', 'Хлев без забора очков не приносит, но клетку занимает. У игрока не больше 4 хлевов.'],
+      ex:'На схеме: хлев в пастбище → 1 очко, без забора → 0'})},
+  {id:'rooms', kind:'rooms', name:'Комнаты', short:'Комнаты', rule:'изба 0 · мазанка 1 · каменный дом 2 за комнату', icon:() => IC.room('c'), max:15,
+    hint:() => ({art:eq([{icon:IC.room('w'), n:0, cap:'изба', op:''}, {icon:IC.room('c'), n:1, cap:'мазанка', op:''}, {icon:IC.room('s'), n:2, cap:'каменный дом', op:''}]),
+      text:['Выберите, какой у игрока дом, и укажите число комнат.', 'Изба (дерево) — 0 за комнату, мазанка (глина) — 1 очко, каменный дом — 2 очка за комнату.'],
+      ex:'Мазанка из 4 комнат → 4 очка'})},
+  {id:'family', kind:'unit', name:'Члены семьи', short:'Семья', rule:'3 очка за каждого, максимум 5', icon:() => IC.meeple('#A9ADA8'), per:3, max:5,
+    hint:() => ({art:eq([{icon:IC.meeple('#A9ADA8'), n:2, cap:'с начала'}, {icon:IC.meeple('#A9ADA8'), n:2, cap:'родились'}], '4 × 3 = 12'),
+      text:['3 очка за каждого члена семьи, включая только что родившихся.', 'Максимум — 5 человек.']})},
+
+  {id:'majors', kind:'majors', name:'Особые улучшения', short:'Особые улучшения', rule:'очки на карте + бонус мастерских', icon:IC.major,
+    hint:() => ({art:eq([{icon:IC.major(), n:2, cap:'столярная'}, {icon:IC.wood(), n:6, cap:'дерева'}], '2 + 2 = 4'),
+      text:['Под каждой картой нажмите имя игрока, у которого она есть. Каждая карта только одна, поэтому её нельзя отметить у двоих сразу.', 'Мастерские в конце игры приносят бонус за ресурсы в запасе: столярная — дерево 3/5/7, гончарная — глина 3/5/7, корзиночная — тростник 2/4/5 → 1/2/3 очка. Бонус считается сам.']})},
+  {id:'cards', kind:'free', name:'Простые улучшения и профессии', short:'Простые улучшения и профессии', rule:'сумма очков с карт', icon:IC.minor, min:-50, max:200,
+    hint:() => ({art:eq([{icon:IC.minor(), n:1, cap:'простое улучшение'}, {icon:IC.minor(), n:2, cap:'профессия'}], '3'),
+      text:['Сложите победные очки, напечатанные на сыгранных простых улучшениях и профессиях, и введите сумму.', 'Особые улучшения сюда не входят — они считаются выше.']})},
+  {id:'bonus', kind:'free', name:'Бонусные очки', short:'Бонусные очки', rule:'по условиям карт', icon:IC.card, min:-50, max:200,
+    hint:() => ({art:eq([{icon:IC.card(), n:'?', cap:'условие карты'}]),
+      text:['Очки, которые карты дают по особому условию в конце игры. Если таких карт нет — поставьте 0.']})},
+  {id:'begging', kind:'unit', name:'Маркеры попрошайничества', short:'Попрошайничество', rule:'−3 за каждый маркер', icon:IC.begging, per:-3, max:30,
+    hint:() => ({art:eq([{icon:IC.begging(), n:2, cap:'маркера'}], '2 × −3 = −6'),
+      text:['Маркер попрошайничества берут за каждую единицу еды, которую не смогли заплатить, когда кормили семью.', 'Каждый маркер — −3.']})}
+];
+const CAT = Object.fromEntries(CATS.map(c => [c.id, c]));
+const GROUPS = [
+  {id:'land', title:'Поля и пастбища', nav:'Поля', cats:['fields','pastures']},
+  {id:'crops', title:'Зерно и овощи', nav:'Урожай', cats:['grain','veg']},
+  {id:'animals', title:'Овцы, свиньи, коровы', nav:'Животные', cats:['sheep','boar','cattle']},
+  {id:'farm', title:'Двор, дом и семья', nav:'Двор', cats:['unused','stables','rooms','family'],
+    pairs:[{icon:IC.empty, pts:-1, cap:'незанятая клетка'}, {icon:IC.barn, pts:1, cap:'хлев в пастбище'},
+      {icon:() => IC.room('w'), pts:0, cap:'комната избы'}, {icon:() => IC.room('c'), pts:1, cap:'комната мазанки'},
+      {icon:() => IC.room('s'), pts:2, cap:'комната каменного дома'}, {icon:() => IC.meeple('#A9ADA8'), pts:3, cap:'член семьи'}]},
+  {id:'extra', title:'Доп. очки', nav:'Доп. очки', cats:['majors','cards','bonus','begging'],
+    pairs:[{icon:IC.major, pts:'?', cap:'особые улучшения'}, {icon:IC.minor, pts:'?', cap:'простые улучшения и профессии'},
+      {icon:IC.card, pts:'?', cap:'бонусные очки'}, {icon:IC.begging, pts:-3, cap:'маркер попрошайничества'}]}
+];
+
+/* ---------- состояние ---------- */
+const uid = () => 'p' + Math.random().toString(36).slice(2, 9);
+const blank = () => ({fields:null, pastures:null, grain:null, veg:null, sheep:null, boar:null, cattle:null,
+  unused:null, stables:null, roomType:'w', rooms:null, family:null, cards:null, bonus:null, begging:null});
+const mkPlayer = (name, color) => ({id:uid(), name, color, v:blank()});
+const freshState = () => ({players:[mkPlayer('Игрок 1', 'purple'), mkPlayer('Игрок 2', 'red')], majors:{}, res:{}});
+
+/* Имена и цвета игроков дублируются в куки на 400 дней (больше браузеры не разрешают),
+   очки текущей партии хранятся в localStorage. */
+const COOKIE = 'agricola_players';
+const COOKIE_DAYS = 400;
+function readPlayersCookie() {
+  try {
+    const m = document.cookie.match(new RegExp('(?:^|; )' + COOKIE + '=([^;]*)'));
+    if (!m) return null;
+    const list = JSON.parse(decodeURIComponent(m[1]));
+    if (!Array.isArray(list)) return null;
+    const ok = list.filter(x => x && typeof x.n === 'string').slice(0, 6);
+    return ok.length ? ok : null;
+  } catch (e) { return null; }
+}
+function writePlayersCookie() {
+  try {
+    const data = encodeURIComponent(JSON.stringify(state.players.map(p => ({n:p.name, c:p.color}))));
+    const path = location.pathname.replace(/[^/]*$/, '') || '/';
+    document.cookie = `${COOKIE}=${data}; max-age=${COOKIE_DAYS * 86400}; path=${path}; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
+  } catch (e) {}
+}
+
+let state;
+try {
+  const raw = JSON.parse(localStorage.getItem(STORE));
+  if (raw && Array.isArray(raw.players) && raw.players.length) {
+    raw.players.forEach(p => { p.id = p.id || uid(); p.v = Object.assign(blank(), p.v); if (!COLORS[p.color]) p.color = 'red'; });
+    raw.majors = raw.majors || {}; raw.res = raw.res || {};
+    state = raw;
+  }
+} catch (e) {}
+if (!state) {
+  const saved = readPlayersCookie();
+  state = saved
+    ? {players:saved.map(x => mkPlayer(x.n, COLORS[x.c] ? x.c : 'purple')), majors:{}, res:{}}
+    : freshState();
+}
+
+const save = () => { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} writePlayersCookie(); };
+writePlayersCookie(); /* продлеваем срок куки при каждом заходе */
+const byId = id => state.players.find(p => p.id === id);
+
+function points(p, c) {
+  const v = p.v;
+  switch (c.kind) {
+    case 'ladder': { const n = v[c.id]; if (n == null) return null; const cell = c.ladder.find(([a, b]) => n >= a && n <= b); return cell ? cell[2] : 0; }
+    case 'unit': return v[c.id] == null ? null : v[c.id] * c.per;
+    case 'rooms': return v.rooms == null ? null : v.rooms * MAT[v.roomType].per;
+    case 'majors': return MAJORS.filter(m => state.majors[m.id] === p.id).reduce((s, m) => s + m.pts + (m.steps ? craftBonus(state.res[m.id], m.steps) : 0), 0);
+    case 'free': return v[c.id];
+  }
+  return null;
+}
+const total = p => CATS.reduce((s, c) => s + (points(p, c) || 0), 0);
+
+/* ---------- отрисовка ---------- */
+const catsEl = $('#cats'), dock = $('#dock'), secnav = $('#secnav'), podium = $('#podium'), rgroups = $('#rgroups');
+const openHints = new Set();
+
+const stepper = (key, pid, val, min, max, label, sm) =>
+  `<div class="stepper${sm ? ' sm' : ''}"><button type="button" data-step="-1" aria-label="${esc(label)}: меньше">−</button><input type="number" inputmode="numeric" pattern="-?[0-9]*" placeholder="—" data-key="${key}" data-pid="${pid}" value="${val ?? ''}" min="${min}" max="${max}" aria-label="${esc(label)}"><button type="button" data-step="1" aria-label="${esc(label)}: больше">+</button></div>`;
+
+function boardHTML(g) {
+  const lc = g.cats.map(id => CAT[id]).filter(c => c.kind === 'ladder');
+  if (lc.length) {
+    return `<div class="forest rboard scale" role="group" aria-label="Шкала очков: ${g.title}">${[0,1,2,3,4].map(i =>
+      `<div class="rcol">${coin(lc[0].ladder[i][2], ' md')}${lc.map(c => { const [a, b, pt] = c.ladder[i];
+        return `<div class="tile${c.id === 'pastures' ? ' lbl-top' : ''}${['sheep','boar','cattle'].includes(c.id) ? ' plaque' : ''}" data-tile="${c.id}-${i}" role="img" aria-label="${c.name} ${rng(a, b)}: ${fmt(pt)}">${c.icon()}<b>${rng(a, b)}</b><span class="marks"></span></div>`; }).join('')}</div>`).join('')}</div>`;
+  }
+  return `<div class="forest rboard pairs" role="group" aria-label="Очки: ${g.title}">${g.pairs.map(p =>
+    `<div class="pair"><div class="pair-top"><div class="tile">${p.icon()}</div>${coin(p.pts, ' md')}</div><small>${p.cap}</small></div>`).join('')}</div>`;
+}
+
+function catHTML(c) {
+  const open = openHints.has(c.id), h = c.hint(), ps = state.players;
+  const head = `<header class="cat-h">
+      <div class="ico">${c.icon()}</div>
+      <div><h3>${c.name}<span class="donemark" data-done="${c.id}" hidden title="Посчитано у всех">${CHECK}</span></h3>${c.rule ? `<span class="rule">${c.rule}</span>` : ''}</div>
+      <button type="button" class="hint-btn" aria-expanded="${open}" aria-controls="hint-${c.id}">${open ? 'Скрыть' : 'Как считать'}</button>
+    </header>`;
+  const hint = `<div class="hint" id="hint-${c.id}"${open ? '' : ' hidden'}><div class="hint-art">${h.art || ''}</div><div class="hint-text">${h.text.map(t => `<p>${t}</p>`).join('')}${h.ex ? `<p class="ex">${h.ex}</p>` : ''}</div></div>`;
+  const name = p => `<span class="pname">${dot(p)}${pn(p)}</span>`;
+  const pts = p => `<output class="coin" data-pts="${c.id}" data-pid="${p.id}"></output>`;
+  let body;
+  if (c.kind === 'majors') {
+    body = `<div class="mlist" data-mlist></div><ul class="plist summary">${ps.map(p => `<li class="prow sum">${name(p)}<span class="mcount" data-mcount="${p.id}"></span>${pts(p)}</li>`).join('')}</ul>`;
+  } else if (c.kind === 'rooms') {
+    body = `<ul class="plist">${ps.map(p => `<li class="prow rooms">${name(p)}${pts(p)}<div class="rctrl"><div class="seg" role="group" aria-label="Дом: ${esc(p.name)}">${Object.entries(MAT).map(([k, m]) => `<button type="button" data-room="${k}" data-pid="${p.id}" aria-pressed="${p.v.roomType === k}" aria-label="${m.name}">${IC.room(k)}${m.short}</button>`).join('')}</div>${stepper('rooms', p.id, p.v.rooms, 0, c.max, 'Комнаты: ' + p.name)}</div></li>`).join('')}</ul>`;
+  } else {
+    body = `<ul class="plist">${ps.map(p => `<li class="prow">${name(p)}${stepper(c.id, p.id, p.v[c.id], c.min ?? 0, c.max, c.name + ': ' + p.name)}${pts(p)}</li>`).join('')}</ul>`;
+  }
+  return `<article class="cat" id="cat-${c.id}">${head}${hint}${body}</article>`;
+}
+
+function renderMajors() {
+  const box = catsEl.querySelector('[data-mlist]'); if (!box) return;
+  box.innerHTML = MAJORS.map(m => {
+    const owner = byId(state.majors[m.id]);
+    return `<div class="mitem${owner ? ' owned' : ''}">
+      <div class="mtop"><span class="mname"><b>${m.name}</b>${m.sub ? `<small>${m.sub}</small>` : ''}</span>${coin(m.pts, ' sm')}</div>
+      <div class="owners" role="group" aria-label="У кого: ${m.name}">${state.players.map(p => `<button type="button" class="owner" data-major="${m.id}" data-pid="${p.id}" aria-pressed="${owner === p}" style="--pc:${COLORS[p.color][0]};--pc-ink:${COLORS[p.color][2]}">${dot(p)}${pn(p)}</button>`).join('')}</div>
+      ${owner && m.steps ? `<div class="mbonus"><span>${m.res} в запасе (${pn(owner)}) <b data-mbonus="${m.id}"></b></span>${stepper('res.' + m.id, '', state.res[m.id], 0, 60, m.res + ' в запасе', true)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderAll() {
+  catsEl.innerHTML = GROUPS.map(g => `<section class="group" id="g-${g.id}" aria-labelledby="gh-${g.id}"><h2 id="gh-${g.id}">${g.title}</h2>${boardHTML(g)}<div class="cats">${g.cats.map(id => catHTML(CAT[id])).join('')}</div></section>`).join('');
+  secnav.innerHTML = GROUPS.map((g, i) => `<a href="#g-${g.id}" data-nav="g-${g.id}" aria-current="${i === 0}">${g.nav}</a>`).join('') + '<a href="#results" data-nav="results" aria-current="false">Итоги</a>';
+  renderMajors();
+  update();
+  spy();
+}
+
+function update() {
+  const ps = state.players;
+  ps.forEach(p => CATS.forEach(c => {
+    const el = catsEl.querySelector(`[data-pts="${c.id}"][data-pid="${p.id}"]`); if (!el) return;
+    const n = points(p, c);
+    el.innerHTML = n == null ? '—' : coinInner(n);
+    el.classList.toggle('neg', n != null && n < 0);
+    el.classList.toggle('empty', n == null);
+  }));
+  CATS.forEach(c => {
+    if (c.kind === 'ladder') c.ladder.forEach(([a, b], i) => {
+      const tile = catsEl.querySelector(`[data-tile="${c.id}-${i}"]`); if (!tile) return;
+      const hits = ps.filter(p => p.v[c.id] != null && p.v[c.id] >= a && p.v[c.id] <= b);
+      tile.querySelector('.marks').innerHTML = hits.map(p => IC.meeple(COLORS[p.color][0])).join('');
+      tile.classList.toggle('hit', hits.length > 0);
+    });
+    const dm = catsEl.querySelector(`[data-done="${c.id}"]`);
+    if (dm) dm.hidden = c.kind === 'majors' || !ps.every(p => (c.kind === 'rooms' ? p.v.rooms : p.v[c.id]) != null);
+  });
+  catsEl.querySelectorAll('[data-room]').forEach(b => b.setAttribute('aria-pressed', String(byId(b.dataset.pid).v.roomType === b.dataset.room)));
+  MAJORS.forEach(m => { const el = catsEl.querySelector(`[data-mbonus="${m.id}"]`); if (el) el.textContent = '→ бонус ' + craftBonus(state.res[m.id], m.steps); });
+  ps.forEach(p => {
+    const el = catsEl.querySelector(`[data-mcount="${p.id}"]`); if (!el) return;
+    const k = MAJORS.filter(m => state.majors[m.id] === p.id).length;
+    el.textContent = k ? `${k} ${plural(k, ['карта', 'карты', 'карт'])}` : 'нет карт';
+  });
+  renderDock();
+  renderResults();
+}
+
+function leaders() {
+  const totals = state.players.map(total), max = Math.max(...totals);
+  const show = state.players.length > 1 && totals.some(t => t !== max);
+  return {totals, isLead: i => show && totals[i] === max};
+}
+
+function renderDock() {
+  const {totals, isLead} = leaders();
+  dock.innerHTML = state.players.map((p, i) => `<a class="tot${isLead(i) ? ' lead' : ''}" href="#results">${dot(p)}${pn(p)}<b>${fmtT(totals[i])}</b></a>`).join('');
+}
+
+function renderResults() {
+  const ps = state.players, {totals, isLead} = leaders();
+  podium.innerHTML = ps.map((p, i) => `<div class="ptot${isLead(i) ? ' lead' : ''}">${IC.meeple(COLORS[p.color][0])}<span class="ptname">${pn(p)}${isLead(i) ? '<em>лидер</em>' : ''}</span><b>${fmtT(totals[i])}</b></div>`).join('');
+  rgroups.innerHTML = GROUPS.map(g => `<div class="rgroup"><h3>${g.title}</h3><div class="rscroll"><div class="forest rtable" style="--n:${ps.length}" role="table" aria-label="${g.title}">
+      <div class="rrow rhead" role="row"><span role="columnheader"><span class="sr">Значок</span></span><span role="columnheader"><span class="sr">Категория</span></span>${ps.map(p => `<span class="rhp" role="columnheader" title="${esc(p.name)}">${IC.meeple(COLORS[p.color][0])}<span class="sr">${esc(p.name)}</span></span>`).join('')}</div>
+      ${g.cats.map(id => { const c = CAT[id]; return `<div class="rrow" role="row"><span class="ricon" role="cell">${c.icon()}</span><span class="rname" role="rowheader">${c.short}</span>${ps.map(p => `<span role="cell">${coin(points(p, c), ' sm')}</span>`).join('')}</div>`; }).join('')}
+    </div></div></div>`).join('');
+}
+
+let observer;
+function spy() {
+  if (!('IntersectionObserver' in window)) return;
+  if (observer) observer.disconnect();
+  const set = id => secnav.querySelectorAll('[data-nav]').forEach(a => a.setAttribute('aria-current', String(a.dataset.nav === id)));
+  observer = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) set(e.target.id); }), {rootMargin:'-35% 0px -60% 0px'});
+  document.querySelectorAll('.group, #results').forEach(s => observer.observe(s));
+}
+
+/* ---------- ввод ---------- */
+const getVal = (k, pid) => k.startsWith('res.') ? state.res[k.slice(4)] : byId(pid).v[k];
+const setVal = (k, pid, n) => { if (k.startsWith('res.')) state.res[k.slice(4)] = n; else byId(pid).v[k] = n; };
+const clamp = (n, inp) => Math.min(+inp.max, Math.max(+inp.min, n));
+const changed = () => { save(); update(); };
+
+catsEl.addEventListener('click', e => {
+  const step = e.target.closest('[data-step]');
+  if (step) {
+    const inp = step.parentElement.querySelector('input'), d = +step.dataset.step;
+    const now = inp.value === '' ? null : parseInt(inp.value, 10);
+    const n = clamp(now == null || isNaN(now) ? (d > 0 ? 1 : 0) : now + d, inp);
+    inp.value = n; setVal(inp.dataset.key, inp.dataset.pid, n); changed(); return;
+  }
+  const hb = e.target.closest('.hint-btn');
+  if (hb) {
+    const id = hb.getAttribute('aria-controls'), h = document.getElementById(id), open = h.hidden;
+    h.hidden = !open; hb.setAttribute('aria-expanded', String(open)); hb.textContent = open ? 'Скрыть' : 'Как считать';
+    const cid = id.slice(5); if (open) openHints.add(cid); else openHints.delete(cid);
+    return;
+  }
+  const rm = e.target.closest('[data-room]');
+  if (rm) { byId(rm.dataset.pid).v.roomType = rm.dataset.room; changed(); return; }
+  const ow = e.target.closest('[data-major]');
+  if (ow) {
+    const m = ow.dataset.major;
+    if (state.majors[m] === ow.dataset.pid) delete state.majors[m]; else state.majors[m] = ow.dataset.pid;
+    renderMajors(); changed();
+  }
+});
+catsEl.addEventListener('input', e => {
+  const inp = e.target.closest('[data-key]'); if (!inp) return;
+  if (inp.value === '') { setVal(inp.dataset.key, inp.dataset.pid, null); changed(); return; }
+  const n = parseInt(inp.value, 10); if (isNaN(n)) return;
+  setVal(inp.dataset.key, inp.dataset.pid, clamp(n, inp)); changed();
+});
+catsEl.addEventListener('change', e => {
+  const inp = e.target.closest('[data-key]'); if (inp) { const v = getVal(inp.dataset.key, inp.dataset.pid); inp.value = v ?? ''; }
+});
+catsEl.addEventListener('focusin', e => { if (e.target.matches('[data-key]')) e.target.select(); });
+
+/* ---------- игроки ---------- */
+const dlg = $('#playersDlg'), dlgBody = $('#dlgBody');
+function renderDialog() {
+  dlgBody.innerHTML = state.players.map(p => `<div class="pedit">
+    <input class="pn" style="${pnStyle(p)}" value="${esc(p.name)}" maxlength="24" data-name="${p.id}" aria-label="Имя игрока" enterkeyhint="done">
+    <div class="swatches" role="radiogroup" aria-label="Цвет: ${esc(p.name)}">
+      ${Object.entries(COLORS).map(([k, [hex, label]]) => `<button type="button" class="sw" role="radio" aria-checked="${p.color === k}" aria-label="${label}" data-color="${k}" data-pid="${p.id}" style="background:${hex}"></button>`).join('')}
+      ${state.players.length > 1 ? `<button type="button" class="linkbtn" data-remove="${p.id}">удалить</button>` : ''}
+    </div></div>`).join('');
+  $('#addPlayer').hidden = state.players.length >= 6;
+}
+$('#openPlayers').addEventListener('click', () => { renderDialog(); if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); });
+dlg.addEventListener('click', e => {
+  if (e.target === dlg || e.target.closest('[data-close]')) { dlg.close ? dlg.close() : dlg.removeAttribute('open'); return; }
+  const sw = e.target.closest('[data-color]');
+  if (sw) { byId(sw.dataset.pid).color = sw.dataset.color; save(); renderDialog(); renderAll(); return; }
+  const rm = e.target.closest('[data-remove]');
+  if (rm) {
+    const p = byId(rm.dataset.remove);
+    if (!confirm(`Удалить игрока «${p.name}»?`)) return;
+    state.players = state.players.filter(q => q !== p);
+    Object.keys(state.majors).forEach(k => { if (state.majors[k] === p.id) delete state.majors[k]; });
+    save(); renderDialog(); renderAll();
+  }
+});
+dlgBody.addEventListener('input', e => {
+  const inp = e.target.closest('[data-name]'); if (!inp) return;
+  byId(inp.dataset.name).name = inp.value; save(); renderAll();
+});
+$('#addPlayer').addEventListener('click', () => {
+  const used = state.players.map(p => p.color);
+  state.players.push(mkPlayer('Игрок ' + (state.players.length + 1), Object.keys(COLORS).find(k => !used.includes(k)) || 'red'));
+  save(); renderDialog(); renderAll();
+});
+$('#resetScores').addEventListener('click', () => {
+  if (!confirm('Начать новую партию? Все очки сотрутся, игроки останутся.')) return;
+  state.players.forEach(p => { p.v = blank(); });
+  state.majors = {}; state.res = {};
+  save(); renderAll();
+  dlg.close ? dlg.close() : dlg.removeAttribute('open');
+  window.scrollTo({top:0});
+});
+
+renderAll();
+})();
+</script>
+</body>
+</html>
