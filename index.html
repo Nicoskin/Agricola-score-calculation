@@ -231,6 +231,14 @@ dialog::backdrop{background:rgba(20,22,12,.55)}
 .swatches .linkbtn{margin-left:auto}
 .dlg-f{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;padding:12px 16px;border-top:1px solid var(--line)}
 
+.export{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.export h3{margin:0 2px 8px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.export-btns{display:flex;flex-wrap:wrap;gap:8px}
+.export-btns .btn{flex:1 1 auto}
+.btn:disabled{opacity:.6;cursor:progress}
+#exportImg{display:block;width:100%;height:auto;border-radius:10px}
+.dlg-b.pad{padding:12px 16px}
+
 footer{max-width:1180px;margin:0 auto;padding:0 16px 24px;color:var(--muted);font-size:14px}
 footer p{margin:0;max-width:75ch}
 </style>
@@ -251,6 +259,14 @@ footer p{margin:0;max-width:75ch}
     <h2 id="resTitle">Итоги партии</h2>
     <div class="podium" id="podium"></div>
     <div id="rgroups"></div>
+    <div class="export">
+      <h3>Выгрузить результаты</h3>
+      <div class="export-btns">
+        <button type="button" class="btn" id="expImg">Картинка</button>
+        <button type="button" class="btn ghost" id="expTxt">Текст .txt</button>
+        <button type="button" class="btn ghost" id="expJson">JSON</button>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -266,6 +282,15 @@ footer p{margin:0;max-width:75ch}
   <div class="dlg-f">
     <button type="button" class="btn ghost" id="addPlayer">+ Добавить игрока</button>
     <button type="button" class="btn danger" id="resetScores">Новая партия</button>
+  </div>
+</dialog>
+
+<dialog id="exportDlg" aria-labelledby="expTitle">
+  <div class="dlg-h"><h2 id="expTitle">Картинка итогов</h2><button type="button" class="btn ghost" data-close>Закрыть</button></div>
+  <div class="dlg-b pad"><img id="exportImg" alt="Итоги партии"></div>
+  <div class="dlg-f">
+    <button type="button" class="btn ghost" id="shareImg" hidden>Поделиться</button>
+    <button type="button" class="btn" id="saveImg">Скачать PNG</button>
   </div>
 </dialog>
 
@@ -731,6 +756,251 @@ $('#resetScores').addEventListener('click', () => {
   save(); renderAll();
   dlg.close ? dlg.close() : dlg.removeAttribute('open');
   window.scrollTo({top:0});
+});
+
+/* ---------- выгрузка результатов ---------- */
+const pad2 = x => String(x).padStart(2, '0');
+const stamp = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}-${pad2(d.getHours())}${pad2(d.getMinutes())}`;
+const dateRu = d => d.toLocaleString('ru-RU', {day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'});
+const placeOf = (totals, i) => 1 + totals.filter(t => t > totals[i]).length;
+const ptsWord = n => plural(n, ['очко', 'очка', 'очков']);
+
+function download(blob, name) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 2000);
+}
+
+function catDetail(p, c) {
+  const n = points(p, c);
+  if (c.kind === 'majors') {
+    const cards = MAJORS.filter(m => state.majors[m.id] === p.id);
+    return {points:n, cards:cards.map(m => ({name:m.name + (m.sub && !m.steps ? ` (${m.sub})` : ''), points:m.pts, bonus:m.steps ? craftBonus(state.res[m.id], m.steps) : 0}))};
+  }
+  if (c.kind === 'rooms') return {count:p.v.rooms, house:MAT[p.v.roomType].name, points:n};
+  if (c.kind === 'free') return {points:n};
+  return {count:p.v[c.id], points:n};
+}
+
+function resultData(now) {
+  const ps = state.players, totals = ps.map(total);
+  return {
+    game:'Агрикола (издание 2016)',
+    exportedAt:now.toISOString(),
+    exportedAtLocal:dateRu(now),
+    players:ps.map((p, i) => ({
+      name:p.name, color:COLORS[p.color][1], place:placeOf(totals, i), total:totals[i],
+      scores:Object.fromEntries(CATS.map(c => [c.id, Object.assign({category:c.name}, catDetail(p, c))]))
+    })).sort((a, b) => a.place - b.place)
+  };
+}
+
+function resultText(now) {
+  const ps = state.players, totals = ps.map(total);
+  const order = ps.map((p, i) => i).sort((a, b) => totals[b] - totals[a]);
+  const L = ['АГРИКОЛА — ИТОГИ ПАРТИИ', 'Дата: ' + dateRu(now), '', 'Места:'];
+  order.forEach(i => L.push(`  ${placeOf(totals, i)}. ${ps[i].name} — ${fmtT(totals[i])} ${ptsWord(totals[i])}`));
+  GROUPS.forEach(g => {
+    L.push('', g.title.toUpperCase());
+    g.cats.forEach(id => {
+      const c = CAT[id];
+      L.push(`  ${c.name}:`);
+      ps.forEach(p => {
+        const d = catDetail(p, c);
+        let s;
+        if (d.points == null) s = 'не посчитано';
+        else if (c.kind === 'majors') s = (d.cards.length ? d.cards.map(k => k.name + (k.bonus ? ` (бонус +${k.bonus})` : '')).join(', ') : 'нет карт') + ` → ${fmt(d.points)}`;
+        else if (c.kind === 'rooms') s = `${d.count} (${d.house.toLowerCase()}) → ${fmt(d.points)}`;
+        else if (c.kind === 'free') s = fmt(d.points);
+        else s = `${d.count} → ${fmt(d.points)}`;
+        L.push(`    ${p.name}: ${s}`);
+      });
+    });
+  });
+  L.push('', 'ИТОГО');
+  order.forEach(i => L.push(`  ${ps[i].name}: ${fmtT(totals[i])}`));
+  return L.join('\r\n') + '\r\n';
+}
+
+const svgImage = s => new Promise(res => {
+  const img = new Image();
+  img.onload = () => res(img); img.onerror = () => res(null);
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
+});
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function fitText(ctx, text, max) {
+  if (ctx.measureText(text).width <= max) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(t + '…').width > max) t = t.slice(0, -1);
+  return t + '…';
+}
+function drawCoin(ctx, cx, cy, r, n) {
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  if (n == null) {
+    ctx.setLineDash([5, 5]); ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    ctx.beginPath(); ctx.arc(cx, cy, r - 2, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle = '#EAF3DC'; ctx.font = `500 ${r * .8}px "Alegreya Sans", sans-serif`; ctx.fillText('—', cx, cy);
+    ctx.restore(); return;
+  }
+  const neg = n < 0;
+  const g = ctx.createRadialGradient(cx - r * .32, cy - r * .44, r * .08, cx, cy, r);
+  (neg ? ['#B98452', '#8A5628', '#5E3614', '#4A2A0E'] : ['#FFF6B8', '#F0CE4E', '#C99B22', '#A57A12']).forEach((col, i) => g.addColorStop([0, .4, .8, 1][i], col));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  ctx.lineWidth = 2.5; ctx.strokeStyle = neg ? '#2E1A07' : '#6F520C'; ctx.stroke();
+  ctx.lineWidth = 2; ctx.strokeStyle = neg ? 'rgba(235,190,140,.5)' : 'rgba(255,244,176,.8)';
+  ctx.beginPath(); ctx.arc(cx, cy, r - 4.5, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = neg ? '#F7E6C6' : '#3A2905';
+  const digits = String(Math.abs(n)), ty = cy + r * .06, big = `800 ${r * 1.02}px "Roboto Slab", Georgia, serif`;
+  ctx.font = big;
+  if (!neg) { ctx.fillText(digits, cx, ty); ctx.restore(); return; }
+  const dw = ctx.measureText(digits).width;
+  ctx.font = `700 ${r * .62}px "Roboto Slab", Georgia, serif`;
+  const mw = ctx.measureText('−').width, gap = r * .04, start = cx - (mw + gap + dw) / 2;
+  ctx.fillText('−', start + mw / 2, ty);
+  ctx.font = big; ctx.fillText(digits, start + mw + gap + dw / 2, ty);
+  ctx.restore();
+}
+function drawForest(ctx, W, H) {
+  ctx.fillStyle = '#3B7127'; ctx.fillRect(0, 0, W, H);
+  [[60, 14, 'rgba(150,205,95,.42)', .3, .3], [86, 21, 'rgba(22,62,16,.42)', .7, .7], [46, 11, 'rgba(105,168,62,.5)', .62, .18],
+   [74, 18, 'rgba(118,178,72,.38)', .18, .82], [114, 26, 'rgba(30,78,22,.3)', .5, .5]].forEach(([s, r, col, ox, oy]) => {
+    ctx.fillStyle = col; ctx.beginPath();
+    for (let y = 0; y < H + s; y += s) for (let x = 0; x < W + s; x += s) {
+      ctx.moveTo(x + ox * s + r, y + oy * s); ctx.arc(x + ox * s, y + oy * s, r, 0, Math.PI * 2);
+    }
+    ctx.fill();
+  });
+}
+
+async function buildImage(now) {
+  try {
+    await Promise.all(['800 60px "Alegreya SC"', '700 30px "Alegreya Sans"', '500 30px "Alegreya Sans"', '800 30px "Roboto Slab"', '700 30px "Roboto Slab"']
+      .map(f => document.fonts.load(f, '0123456789−АаБбВв')));
+  } catch (e) {}
+  const ps = state.players, n = ps.length, totals = ps.map(total);
+  const order = ps.map((p, i) => i).sort((a, b) => totals[b] - totals[a]);
+  const max = Math.max(...totals), showWin = n > 1 && totals.some(t => t !== max);
+  const [catImgs, meeples] = await Promise.all([
+    Promise.all(CATS.map(c => svgImage(c.icon()))),
+    Promise.all(ps.map(p => svgImage(IC.meeple(COLORS[p.color][0]))))
+  ]);
+  const catImg = Object.fromEntries(CATS.map((c, i) => [c.id, catImgs[i]]));
+
+  const W = 1080, P = 48, inner = W - P * 2;
+  const perRow = Math.min(n, 3), gap = 16, cardW = (inner - gap * (perRow - 1)) / perRow, cardH = 150, cardRows = Math.ceil(n / perRow);
+  const colW = Math.min(130, Math.floor((inner - 440) / n));
+  const rowH = 66, labelH = 52, headH = 104, totalH = 96;
+  const tableTop = P + 150 + cardRows * (cardH + gap) + 20;
+  const H = tableTop + headH + GROUPS.reduce((s, g) => s + labelH + g.cats.length * rowH, 0) + 16 + totalH + 70;
+
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d');
+  drawForest(ctx, W, H);
+
+  ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.shadowColor = 'rgba(0,0,0,.45)'; ctx.shadowBlur = 6; ctx.shadowOffsetY = 2;
+  ctx.fillStyle = '#FFF6DC'; ctx.font = '800 76px "Alegreya SC", Georgia, serif'; ctx.fillText('Агрикола', P, P + 66);
+  ctx.font = '500 30px "Alegreya Sans", sans-serif'; ctx.fillStyle = '#E6F1D6'; ctx.fillText('Итоги партии · ' + dateRu(now), P, P + 112);
+  ctx.shadowColor = 'transparent';
+
+  order.forEach((i, k) => {
+    const p = ps[i], x = P + (k % perRow) * (cardW + gap), y = P + 150 + Math.floor(k / perRow) * (cardH + gap);
+    const win = showWin && totals[i] === max;
+    rrect(ctx, x, y, cardW, cardH, 18);
+    ctx.fillStyle = win ? 'rgba(80,60,8,.55)' : 'rgba(16,34,10,.55)'; ctx.fill();
+    if (win) { ctx.lineWidth = 4; ctx.strokeStyle = '#EFCB4A'; ctx.stroke(); }
+    if (meeples[i]) ctx.drawImage(meeples[i], x + 16, y + (cardH - 76) / 2, 76, 76);
+    const tx = x + 106, tw = cardW - 106 - 18;
+    ctx.textAlign = 'left';
+    ctx.font = '700 20px "Alegreya Sans", sans-serif'; ctx.fillStyle = win ? '#F3D467' : 'rgba(235,245,222,.75)';
+    ctx.fillText(`${placeOf(totals, i)} место${win ? ' · победа' : ''}`, tx, y + 36);
+    ctx.font = '700 32px "Alegreya Sans", sans-serif'; ctx.fillStyle = COLORS[p.color][4];
+    ctx.fillText(fitText(ctx, p.name || 'Без имени', tw), tx, y + 76);
+    ctx.font = '800 52px "Alegreya SC", Georgia, serif'; ctx.fillStyle = '#FFF6DC';
+    ctx.fillText(fmtT(totals[i]), tx, y + 130);
+    const numW = ctx.measureText(fmtT(totals[i])).width;
+    ctx.font = '500 24px "Alegreya Sans", sans-serif'; ctx.fillStyle = 'rgba(235,245,222,.8)';
+    ctx.fillText(ptsWord(totals[i]), tx + numW + 8, y + 130);
+  });
+
+  const colX = i => W - P - 12 - (n - i) * colW + colW / 2;
+  let y = tableTop;
+  ps.forEach((p, i) => {
+    if (meeples[i]) ctx.drawImage(meeples[i], colX(i) - 22, y + 4, 44, 44);
+    ctx.textAlign = 'center'; ctx.font = '700 22px "Alegreya Sans", sans-serif'; ctx.fillStyle = COLORS[p.color][4];
+    ctx.fillText(fitText(ctx, p.name || '—', colW - 8), colX(i), y + 80);
+  });
+  y += headH;
+  GROUPS.forEach(g => {
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; ctx.font = '700 20px "Alegreya Sans", sans-serif'; ctx.fillStyle = 'rgba(240,248,228,.8)';
+    ctx.fillText(g.title.toUpperCase(), P + 8, y + 34);
+    y += labelH;
+    g.cats.forEach(id => {
+      const c = CAT[id], h = rowH - 8, cy = y + h / 2;
+      rrect(ctx, P, y, inner, h, 12); ctx.fillStyle = 'rgba(222,248,196,.16)'; ctx.fill();
+      if (catImg[id]) ctx.drawImage(catImg[id], P + 12, cy - 22, 44, 44);
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '700 27px "Alegreya Sans", sans-serif'; ctx.fillStyle = '#F5FBEA';
+      ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+      ctx.fillText(fitText(ctx, c.short, colX(0) - colW / 2 - (P + 70) - 8), P + 70, cy + 1);
+      ctx.shadowColor = 'transparent';
+      ps.forEach((p, i) => drawCoin(ctx, colX(i), cy, 23, points(p, c)));
+      y += rowH;
+    });
+  });
+  y += 16;
+  const th = totalH - 10, ty = y + th / 2;
+  rrect(ctx, P, y, inner, th, 14); ctx.fillStyle = 'rgba(16,34,10,.6)'; ctx.fill();
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillStyle = '#FFF6DC'; ctx.font = '800 38px "Alegreya SC", Georgia, serif';
+  ctx.fillText('Итого', P + 20, ty);
+  ps.forEach((p, i) => {
+    ctx.textAlign = 'center'; ctx.font = '800 44px "Alegreya SC", Georgia, serif';
+    ctx.fillStyle = showWin && totals[i] === max ? '#F3D467' : '#FFF6DC';
+    ctx.fillText(fmtT(totals[i]), colX(i), ty + 2);
+  });
+
+  ctx.textBaseline = 'alphabetic'; ctx.font = '500 20px "Alegreya Sans", sans-serif'; ctx.fillStyle = 'rgba(235,245,222,.7)';
+  ctx.textAlign = 'left'; ctx.fillText('Агрикола · издание 2016', P, H - 30);
+  if (/^https?:$/.test(location.protocol)) { ctx.textAlign = 'right'; ctx.fillText(location.host + location.pathname.replace(/index\.html$/, ''), W - P, H - 30); }
+
+  return new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('браузер не смог сохранить картинку')), 'image/png'));
+}
+
+const exportDlg = $('#exportDlg'), exportImg = $('#exportImg');
+let exportFile = null;
+$('#expImg').addEventListener('click', async e => {
+  const btn = e.currentTarget, label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Рисую…';
+  try {
+    const now = new Date(), blob = await buildImage(now);
+    exportFile = new File([blob], `agricola-${stamp(now)}.png`, {type:'image/png'});
+    if (exportImg.src.startsWith('blob:')) URL.revokeObjectURL(exportImg.src);
+    exportImg.src = URL.createObjectURL(blob);
+    $('#shareImg').hidden = !(navigator.canShare && navigator.canShare({files:[exportFile]}));
+    if (exportDlg.showModal) exportDlg.showModal(); else exportDlg.setAttribute('open', '');
+  } catch (err) {
+    alert('Не получилось нарисовать картинку: ' + err.message + '. Попробуйте выгрузить текстом.');
+  }
+  btn.disabled = false; btn.textContent = label;
+});
+$('#saveImg').addEventListener('click', () => { if (exportFile) download(exportFile, exportFile.name); });
+$('#shareImg').addEventListener('click', async () => {
+  try { await navigator.share({files:[exportFile], title:'Агрикола — итоги партии'}); } catch (e) {}
+});
+exportDlg.addEventListener('click', e => {
+  if (e.target === exportDlg || e.target.closest('[data-close]')) { exportDlg.close ? exportDlg.close() : exportDlg.removeAttribute('open'); }
+});
+$('#expTxt').addEventListener('click', () => {
+  const now = new Date();
+  download(new Blob(['﻿' + resultText(now)], {type:'text/plain;charset=utf-8'}), `agricola-${stamp(now)}.txt`);
+});
+$('#expJson').addEventListener('click', () => {
+  const now = new Date();
+  download(new Blob([JSON.stringify(resultData(now), null, 2)], {type:'application/json'}), `agricola-${stamp(now)}.json`);
 });
 
 renderAll();
