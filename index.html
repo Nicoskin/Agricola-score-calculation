@@ -237,6 +237,8 @@ dialog::backdrop{background:rgba(20,22,12,.55)}
 .export-btns .btn{flex:1 1 auto}
 .btn:disabled{opacity:.6;cursor:progress}
 #exportImg{display:block;width:100%;height:auto;border-radius:10px}
+.opt{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-weight:500;cursor:pointer;line-height:1.3}
+.opt input{flex:none;width:22px;height:22px;margin:0;accent-color:var(--accent)}
 .dlg-b.pad{padding:12px 16px}
 
 footer{max-width:1180px;margin:0 auto;padding:0 16px 24px;color:var(--muted);font-size:14px}
@@ -287,7 +289,10 @@ footer p{margin:0;max-width:75ch}
 
 <dialog id="exportDlg" aria-labelledby="expTitle">
   <div class="dlg-h"><h2 id="expTitle">Картинка итогов</h2><button type="button" class="btn ghost" data-close>Закрыть</button></div>
-  <div class="dlg-b pad"><img id="exportImg" alt="Итоги партии"></div>
+  <div class="dlg-b pad">
+    <label class="opt"><input type="checkbox" id="expDetails"> Показывать количество: сколько свиней, комнат, зерна…</label>
+    <img id="exportImg" alt="Итоги партии">
+  </div>
   <div class="dlg-f">
     <button type="button" class="btn ghost" id="shareImg" hidden>Поделиться</button>
     <button type="button" class="btn" id="saveImg">Скачать PNG</button>
@@ -866,18 +871,25 @@ function drawCoin(ctx, cx, cy, r, n) {
   ctx.restore();
 }
 function drawForest(ctx, W, H) {
-  ctx.fillStyle = '#3B7127'; ctx.fillRect(0, 0, W, H);
-  [[60, 14, 'rgba(150,205,95,.42)', .3, .3], [86, 21, 'rgba(22,62,16,.42)', .7, .7], [46, 11, 'rgba(105,168,62,.5)', .62, .18],
-   [74, 18, 'rgba(118,178,72,.38)', .18, .82], [114, 26, 'rgba(30,78,22,.3)', .5, .5]].forEach(([s, r, col, ox, oy]) => {
+  ctx.fillStyle = '#2C5A1F'; ctx.fillRect(0, 0, W, H);
+  [[60, 14, 'rgba(120,180,75,.26)', .3, .3], [86, 21, 'rgba(14,44,10,.45)', .7, .7], [46, 11, 'rgba(90,150,55,.3)', .62, .18],
+   [74, 18, 'rgba(100,160,62,.22)', .18, .82], [114, 26, 'rgba(16,48,12,.35)', .5, .5]].forEach(([s, r, col, ox, oy]) => {
     ctx.fillStyle = col; ctx.beginPath();
     for (let y = 0; y < H + s; y += s) for (let x = 0; x < W + s; x += s) {
       ctx.moveTo(x + ox * s + r, y + oy * s); ctx.arc(x + ox * s, y + oy * s, r, 0, Math.PI * 2);
     }
     ctx.fill();
   });
+  ctx.fillStyle = 'rgba(8,18,5,.22)'; ctx.fillRect(0, 0, W, H);
 }
 
-async function buildImage(now) {
+/* сколько штук стоит за очками (для картинки с количеством) */
+const countOf = (p, c) => c.kind === 'ladder' || c.kind === 'unit' ? p.v[c.id]
+  : c.kind === 'rooms' ? p.v.rooms
+  : c.kind === 'majors' ? MAJORS.filter(m => state.majors[m.id] === p.id).length
+  : null;
+
+async function buildImage(now, details) {
   try {
     await Promise.all(['800 60px "Alegreya SC"', '700 30px "Alegreya Sans"', '500 30px "Alegreya Sans"', '800 30px "Roboto Slab"', '700 30px "Roboto Slab"']
       .map(f => document.fonts.load(f, '0123456789−АаБбВв')));
@@ -885,15 +897,17 @@ async function buildImage(now) {
   const ps = state.players, n = ps.length, totals = ps.map(total);
   const order = ps.map((p, i) => i).sort((a, b) => totals[b] - totals[a]);
   const max = Math.max(...totals), showWin = n > 1 && totals.some(t => t !== max);
-  const [catImgs, meeples] = await Promise.all([
+  const [catImgs, meeples, roomImgs] = await Promise.all([
     Promise.all(CATS.map(c => svgImage(c.icon()))),
-    Promise.all(ps.map(p => svgImage(IC.meeple(COLORS[p.color][0]))))
+    Promise.all(ps.map(p => svgImage(IC.meeple(COLORS[p.color][0])))),
+    Promise.all(Object.keys(MAT).map(k => svgImage(IC.room(k))))
   ]);
   const catImg = Object.fromEntries(CATS.map((c, i) => [c.id, catImgs[i]]));
+  const roomImg = Object.fromEntries(Object.keys(MAT).map((k, i) => [k, roomImgs[i]]));
 
   const W = 1080, P = 48, inner = W - P * 2;
   const perRow = Math.min(n, 3), gap = 16, cardW = (inner - gap * (perRow - 1)) / perRow, cardH = 150, cardRows = Math.ceil(n / perRow);
-  const colW = Math.min(130, Math.floor((inner - 440) / n));
+  const colW = details ? Math.min(200, Math.floor((inner - 330) / n)) : Math.min(130, Math.floor((inner - 440) / n));
   const rowH = 66, labelH = 52, headH = 104, totalH = 96;
   const tableTop = P + 150 + cardRows * (cardH + gap) + 20;
   const H = tableTop + headH + GROUPS.reduce((s, g) => s + labelH + g.cats.length * rowH, 0) + 16 + totalH + 70;
@@ -930,10 +944,16 @@ async function buildImage(now) {
 
   const colX = i => W - P - 12 - (n - i) * colW + colW / 2;
   let y = tableTop;
+  rrect(ctx, P, y, inner, headH - 16, 14); ctx.fillStyle = 'rgba(12,26,8,.72)'; ctx.fill();
+  if (details) {
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.font = '500 22px "Alegreya Sans", sans-serif'; ctx.fillStyle = 'rgba(235,245,222,.75)';
+    ctx.fillText('×  — сколько штук', P + 20, y + (headH - 16) / 2);
+    ctx.textBaseline = 'alphabetic';
+  }
   ps.forEach((p, i) => {
-    if (meeples[i]) ctx.drawImage(meeples[i], colX(i) - 22, y + 4, 44, 44);
-    ctx.textAlign = 'center'; ctx.font = '700 22px "Alegreya Sans", sans-serif'; ctx.fillStyle = COLORS[p.color][4];
-    ctx.fillText(fitText(ctx, p.name || '—', colW - 8), colX(i), y + 80);
+    if (meeples[i]) ctx.drawImage(meeples[i], colX(i) - 22, y + 6, 44, 44);
+    ctx.textAlign = 'center'; ctx.font = '700 24px "Alegreya Sans", sans-serif'; ctx.fillStyle = COLORS[p.color][4];
+    ctx.fillText(fitText(ctx, p.name || '—', colW - 8), colX(i), y + 76);
   });
   y += headH;
   GROUPS.forEach(g => {
@@ -948,7 +968,20 @@ async function buildImage(now) {
       ctx.shadowColor = 'rgba(0,0,0,.6)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
       ctx.fillText(fitText(ctx, c.short, colX(0) - colW / 2 - (P + 70) - 8), P + 70, cy + 1);
       ctx.shadowColor = 'transparent';
-      ps.forEach((p, i) => drawCoin(ctx, colX(i), cy, 23, points(p, c)));
+      ps.forEach((p, i) => {
+        const coinX = details ? colX(i) + colW / 2 - 34 : colX(i);
+        drawCoin(ctx, coinX, cy, 23, points(p, c));
+        const cnt = details ? countOf(p, c) : null;
+        if (cnt == null) return;
+        const txt = '×' + cnt, right = coinX - 32;
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.font = '700 26px "Alegreya Sans", sans-serif'; ctx.fillStyle = '#F5FBEA';
+        ctx.shadowColor = 'rgba(0,0,0,.7)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 1;
+        ctx.fillText(txt, right, cy + 1);
+        ctx.shadowColor = 'transparent';
+        if (c.kind === 'rooms' && colW >= 150 && roomImg[p.v.roomType]) {
+          ctx.drawImage(roomImg[p.v.roomType], right - ctx.measureText(txt).width - 36, cy - 16, 32, 32);
+        }
+      });
       y += rowH;
     });
   });
@@ -972,20 +1005,30 @@ async function buildImage(now) {
 
 const exportDlg = $('#exportDlg'), exportImg = $('#exportImg');
 let exportFile = null;
+const DETAILS_KEY = 'agricola-export-details', expDetails = $('#expDetails');
+try { expDetails.checked = localStorage.getItem(DETAILS_KEY) === '1'; } catch (e) {}
+async function renderExport() {
+  const now = new Date(), blob = await buildImage(now, expDetails.checked);
+  exportFile = new File([blob], `agricola-${stamp(now)}.png`, {type:'image/png'});
+  if (exportImg.src.startsWith('blob:')) URL.revokeObjectURL(exportImg.src);
+  exportImg.src = URL.createObjectURL(blob);
+  $('#shareImg').hidden = !(navigator.canShare && navigator.canShare({files:[exportFile]}));
+}
+const exportFailed = err => alert('Не получилось нарисовать картинку: ' + err.message + '. Попробуйте выгрузить текстом.');
 $('#expImg').addEventListener('click', async e => {
   const btn = e.currentTarget, label = btn.textContent;
   btn.disabled = true; btn.textContent = 'Рисую…';
   try {
-    const now = new Date(), blob = await buildImage(now);
-    exportFile = new File([blob], `agricola-${stamp(now)}.png`, {type:'image/png'});
-    if (exportImg.src.startsWith('blob:')) URL.revokeObjectURL(exportImg.src);
-    exportImg.src = URL.createObjectURL(blob);
-    $('#shareImg').hidden = !(navigator.canShare && navigator.canShare({files:[exportFile]}));
+    await renderExport();
     if (exportDlg.showModal) exportDlg.showModal(); else exportDlg.setAttribute('open', '');
-  } catch (err) {
-    alert('Не получилось нарисовать картинку: ' + err.message + '. Попробуйте выгрузить текстом.');
-  }
+  } catch (err) { exportFailed(err); }
   btn.disabled = false; btn.textContent = label;
+});
+expDetails.addEventListener('change', async () => {
+  try { localStorage.setItem(DETAILS_KEY, expDetails.checked ? '1' : '0'); } catch (e) {}
+  expDetails.disabled = true;
+  try { await renderExport(); } catch (err) { exportFailed(err); }
+  expDetails.disabled = false;
 });
 $('#saveImg').addEventListener('click', () => { if (exportFile) download(exportFile, exportFile.name); });
 $('#shareImg').addEventListener('click', async () => {
