@@ -1,6 +1,6 @@
 /* Service worker: сайт полностью работает без интернета.
    VERSION меняется при каждом обновлении сайта — старый кэш удаляется. */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CORE = 'agricola-core-' + VERSION;
 const FONTS = 'agricola-fonts-v1';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './favicon.svg', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
