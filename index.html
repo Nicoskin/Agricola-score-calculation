@@ -6,6 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#E8ECDC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16180F" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Агрикола">
 <meta name="description" content="Подсчёт победных очков в Агриколе (издание 2016 года) с подсказками">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,7 +22,7 @@
 :root{
   --ground:#E8ECDC; --surface:#F9FAF3; --surface-2:#EFF2E4; --ink:#23251A; --muted:#606450;
   --line:#CBD0B6; --accent:#46701F; --accent-ink:#FFFFFF; --accent-soft:#D9E5C1;
-  --neg:#8A5424; --focus:#2F5F9E; --shadow:rgba(35,37,26,.10);
+  --neg:#8A5424; --focus:#2F5F9E; --shadow:rgba(35,37,26,.10); --lead-ink:#8A6A0E;
   --display:"Alegreya SC", Georgia, "Times New Roman", serif;
   --body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
 }
@@ -22,13 +30,13 @@
   :root:not([data-theme="light"]){
     --ground:#16180F; --surface:#20231A; --surface-2:#292D21; --ink:#E9EAD8; --muted:#A2A688;
     --line:#3A3F2F; --accent:#94BD57; --accent-ink:#14170D; --accent-soft:#33412A;
-    --neg:#D9A06A; --focus:#8DB4F0; --shadow:rgba(0,0,0,.4);
+    --neg:#D9A06A; --focus:#8DB4F0; --shadow:rgba(0,0,0,.4); --lead-ink:#E6C55A;
   }
 }
 :root[data-theme="dark"]{
   --ground:#16180F; --surface:#20231A; --surface-2:#292D21; --ink:#E9EAD8; --muted:#A2A688;
   --line:#3A3F2F; --accent:#94BD57; --accent-ink:#14170D; --accent-soft:#33412A;
-  --neg:#D9A06A; --focus:#8DB4F0; --shadow:rgba(0,0,0,.4);
+  --neg:#D9A06A; --focus:#8DB4F0; --shadow:rgba(0,0,0,.4); --lead-ink:#E6C55A;
 }
 *{box-sizing:border-box}
 [hidden]{display:none !important}
@@ -58,10 +66,11 @@ h1,h2,h3{text-wrap:balance}
 /* ---------- шапка ---------- */
 .top{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--ground) 92%,transparent);
   backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.top-row{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;
+.top-row{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;
   padding:calc(8px + env(safe-area-inset-top)) 14px 2px}
 .brand{display:flex;align-items:baseline;gap:10px;min-width:0}
 .brand h1{margin:0;font:800 25px/1 var(--display)}
+.top-actions{display:flex;align-items:center;gap:8px}
 .brand small{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 .secnav{max-width:1180px;margin:0 auto;display:flex;gap:4px;overflow-x:auto;padding:6px 10px 8px;scrollbar-width:none}
 .secnav::-webkit-scrollbar{display:none}
@@ -241,6 +250,29 @@ dialog::backdrop{background:rgba(20,22,12,.55)}
 .opt input{flex:none;width:22px;height:22px;margin:0;accent-color:var(--accent)}
 .dlg-b.pad{padding:12px 16px}
 
+.history{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.history h3{margin:0 2px 8px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.history h3 span{letter-spacing:0}
+.hist-empty{margin:0 2px 10px;color:var(--muted);font-size:14px;max-width:60ch}
+.hist{border:1px solid var(--line);border-radius:10px;background:var(--surface-2);margin-bottom:8px}
+.hist-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 10px;width:100%;padding:10px 12px;border:0;background:none;text-align:left;cursor:pointer}
+.hist-date{font-size:13px;color:var(--muted)}
+.hist-chev{grid-row:span 2;color:var(--muted);font-size:20px;line-height:1}
+.hist-top[aria-expanded="true"] .hist-chev{transform:rotate(180deg)}
+.hist-players{display:flex;flex-wrap:wrap;align-items:center;gap:2px 14px;font-size:16px}
+.hp{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.hp b{font-variant-numeric:tabular-nums}
+.hp.win b{color:var(--lead-ink)}
+.hist-detail{padding:0 12px 12px}
+.htable{width:100%;border-collapse:collapse}
+.htable th,.htable td{padding:4px 6px;font-size:14px;text-align:center;vertical-align:middle}
+.htable thead th{font-size:13px}
+.htable th:first-child,.htable td:first-child{text-align:left;color:var(--muted);font-weight:500}
+.htable tr.hgl th{padding-top:12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left}
+.hcell{display:inline-flex;flex-direction:column;align-items:center;gap:2px}
+.hcell small{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.hist-detail .linkbtn{margin-top:6px}
+
 footer{max-width:1180px;margin:0 auto;padding:0 16px 24px;color:var(--muted);font-size:14px}
 footer p{margin:0;max-width:75ch}
 </style>
@@ -250,7 +282,10 @@ footer p{margin:0;max-width:75ch}
 <header class="top">
   <div class="top-row">
     <div class="brand"><h1>Агрикола</h1><small>издание 2016</small></div>
-    <button type="button" class="btn ghost" id="openPlayers">Игроки</button>
+    <div class="top-actions">
+      <button type="button" class="btn ghost" id="installApp" hidden>Установить</button>
+      <button type="button" class="btn ghost" id="openPlayers">Игроки</button>
+    </div>
   </div>
   <nav class="secnav" id="secnav" aria-label="Разделы подсчёта"></nav>
 </header>
@@ -269,11 +304,20 @@ footer p{margin:0;max-width:75ch}
         <button type="button" class="btn ghost" id="expJson">JSON</button>
       </div>
     </div>
+    <div class="history">
+      <h3>История партий <span id="histCount"></span></h3>
+      <div id="histList"></div>
+      <div class="export-btns">
+        <button type="button" class="btn ghost" id="histSave">Записать текущую партию</button>
+        <button type="button" class="btn ghost" id="histJson" hidden>Выгрузить историю</button>
+        <button type="button" class="btn ghost" id="histClear" hidden>Очистить историю</button>
+      </div>
+    </div>
   </section>
 </main>
 
 <footer>
-  <p>Правила подсчёта — по изданию «Агриколы» 2016 года. Рисунки нарисованы для этой страницы по мотивам игровых компонентов. Всё сохраняется только в этом браузере.</p>
+  <p>Правила подсчёта — по изданию «Агриколы» 2016 года. Рисунки нарисованы для этой страницы по мотивам игровых компонентов. Сайт работает без интернета, его можно установить на телефон. Всё сохраняется только в этом браузере.</p>
 </footer>
 
 <nav class="dock" aria-label="Текущий счёт"><div class="dock-in" id="dock"></div></nav>
@@ -755,7 +799,10 @@ $('#addPlayer').addEventListener('click', () => {
   save(); renderDialog(); renderAll();
 });
 $('#resetScores').addEventListener('click', () => {
-  if (!confirm('Начать новую партию? Все очки сотрутся, игроки останутся.')) return;
+  const empty = gameIsEmpty();
+  if (!confirm(empty ? 'Начать новую партию? Игроки останутся.'
+    : 'Начать новую партию? Текущая запишется в историю, а очки обнулятся.')) return;
+  if (!empty) addToHistory();
   state.players.forEach(p => { p.v = blank(); });
   state.majors = {}; state.res = {};
   save(); renderAll();
@@ -1046,7 +1093,143 @@ $('#expJson').addEventListener('click', () => {
   download(new Blob([JSON.stringify(resultData(now), null, 2)], {type:'application/json'}), `agricola-${stamp(now)}.json`);
 });
 
+/* ---------- офлайн и установка на телефон ---------- */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  const hadController = !!navigator.serviceWorker.controller;
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true; location.reload();
+  });
+}
+
+const installBtn = $('#installApp');
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; installBtn.hidden = false; });
+installBtn.addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installBtn.disabled = true;
+  installPrompt.prompt();
+  try { await installPrompt.userChoice; } catch (e) {}
+  installPrompt = null; installBtn.hidden = true; installBtn.disabled = false;
+});
+window.addEventListener('appinstalled', () => { installPrompt = null; installBtn.hidden = true; });
+
+/* ---------- история партий ---------- */
+const HIST = 'agricola-history-v1', HIST_MAX = 100;
+const histList = $('#histList'), histCount = $('#histCount');
+
+function loadHistory() {
+  try { const a = JSON.parse(localStorage.getItem(HIST)); return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+function storeHistory(list) {
+  try { localStorage.setItem(HIST, JSON.stringify(list.slice(0, HIST_MAX))); } catch (e) {}
+}
+const gameIsEmpty = () => state.players.every(p => CATS.every(c => c.kind === 'majors'
+  ? !MAJORS.some(m => state.majors[m.id] === p.id)
+  : (c.kind === 'rooms' ? p.v.rooms : p.v[c.id]) == null));
+
+function snapshot(now) {
+  const ps = state.players, totals = ps.map(total);
+  return {
+    id: 'g' + now.getTime().toString(36),
+    at: now.toISOString(),
+    players: ps.map((p, i) => ({
+      name: p.name || 'Без имени', color: p.color, total: totals[i], place: placeOf(totals, i),
+      cats: Object.fromEntries(CATS.map(c => {
+        const d = catDetail(p, c);
+        return [c.id, {points: d.points, count: d.count == null ? null : d.count, house: d.house || null, cards: (d.cards || []).map(k => k.name)}];
+      }))
+    }))
+  };
+}
+function addToHistory() {
+  const list = loadHistory();
+  list.unshift(snapshot(new Date()));
+  storeHistory(list);
+  renderHistory();
+  return list[0];
+}
+
+const histDate = iso => {
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleString('ru-RU', {day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit'});
+};
+const histColor = c => COLORS[c] || COLORS.red;
+
+function histDetailHTML(g) {
+  const ps = g.players;
+  const cell = d => {
+    if (!d) return '<span class="coin sm empty">—</span>';
+    const c = coin(d.points == null ? null : d.points, ' sm');
+    const extra = d.count == null ? '' : `<small>×${d.count}${d.house ? ' ' + d.house.toLowerCase() : ''}</small>`;
+    return `<span class="hcell">${c}${extra}</span>`;
+  };
+  return `<table class="htable">
+    <thead><tr><th><span class="sr">Категория</span></th>${ps.map(p => `<th><span class="pn" style="--pn-l:${histColor(p.color)[3]};--pn-d:${histColor(p.color)[4]}">${esc(p.name)}</span></th>`).join('')}</tr></thead>
+    <tbody>${GROUPS.map(gr => `<tr class="hgl"><th colspan="${ps.length + 1}">${gr.title}</th></tr>` +
+      gr.cats.map(id => `<tr><td>${CAT[id].short}</td>${ps.map(p => `<td>${cell(p.cats[id])}</td>`).join('')}</tr>`).join('')).join('')}
+      <tr><td><b>Итого</b></td>${ps.map(p => `<td><b>${fmtT(p.total)}</b></td>`).join('')}</tr>
+    </tbody></table>
+    <button type="button" class="linkbtn" data-del="${g.id}">удалить эту партию</button>`;
+}
+
+function renderHistory() {
+  const list = loadHistory();
+  histCount.textContent = list.length ? `(${list.length})` : '';
+  $('#histJson').hidden = $('#histClear').hidden = !list.length;
+  if (!list.length) {
+    histList.innerHTML = '<p class="hist-empty">Пока пусто. Партия попадёт сюда, когда вы нажмёте «Новая партия» или «Записать текущую партию».</p>';
+    return;
+  }
+  histList.innerHTML = list.map(g => {
+    const best = Math.min(...g.players.map(p => p.place));
+    const ps = g.players.slice().sort((a, b) => a.place - b.place);
+    return `<article class="hist">
+      <button type="button" class="hist-top" data-toggle="${g.id}" aria-expanded="false" aria-controls="hd-${g.id}">
+        <span class="hist-date">${histDate(g.at)}</span>
+        <span class="hist-chev" aria-hidden="true">▾</span>
+        <span class="hist-players">${ps.map(p => `<span class="hp${p.place === best ? ' win' : ''}"><i class="pdot" style="background:${histColor(p.color)[0]}"></i><span class="pn" style="--pn-l:${histColor(p.color)[3]};--pn-d:${histColor(p.color)[4]}">${esc(p.name)}</span><b>${fmtT(p.total)}</b></span>`).join('')}</span>
+      </button>
+      <div class="hist-detail" id="hd-${g.id}" hidden>${histDetailHTML(g)}</div>
+    </article>`;
+  }).join('');
+}
+
+histList.addEventListener('click', e => {
+  const t = e.target.closest('[data-toggle]');
+  if (t) {
+    const box = document.getElementById('hd-' + t.dataset.toggle);
+    box.hidden = !box.hidden;
+    t.setAttribute('aria-expanded', String(!box.hidden));
+    return;
+  }
+  const del = e.target.closest('[data-del]');
+  if (del && confirm('Удалить эту партию из истории?')) {
+    storeHistory(loadHistory().filter(g => g.id !== del.dataset.del));
+    renderHistory();
+  }
+});
+$('#histSave').addEventListener('click', e => {
+  if (gameIsEmpty()) { alert('Пока нечего записывать: в партии нет ни одной посчитанной категории.'); return; }
+  addToHistory();
+  const btn = e.currentTarget, label = btn.textContent;
+  btn.textContent = 'Записано ✓'; btn.disabled = true;
+  setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 1800);
+});
+$('#histJson').addEventListener('click', () => {
+  const now = new Date();
+  download(new Blob([JSON.stringify({game:'Агрикола (издание 2016)', exportedAt:now.toISOString(), games:loadHistory()}, null, 2)],
+    {type:'application/json'}), `agricola-history-${stamp(now)}.json`);
+});
+$('#histClear').addEventListener('click', () => {
+  if (!confirm('Стереть всю историю партий? Это нельзя отменить.')) return;
+  storeHistory([]); renderHistory();
+});
+
 renderAll();
+renderHistory();
 })();
 </script>
 </body>
